@@ -1,0 +1,137 @@
+![GitHub last commit](https://img.shields.io/github/last-commit/mgp13/scBONITA?style=for-the-badge)
+
+# scBonita: single-cell Boolean Omics Network Invariant Time Analysis
+
+Publication: Medrxiv link coming soon
+
+Tutorial Link:
+
+Experiments Files:
+
+PyPI link:
+
+![alt text](https://github.com/mgp13/scBONITA/blob/main/Picture1.png?raw=true)
+
+# Abstract: 
+## Background 
+Atherosclerosis (AS)-associated cardiovascular disease is an important cause of mortality in an aging population of people living with HIV (PLWH). This elevated risk of atherosclerosis has been attributed to viral infection, prolonged usage of anti-retroviral therapy, and subsequent chronic inflammation. 
+## Methods
+To investigate dysregulated immune signaling in PLWH with and without AS, we sequenced 9368 peripheral blood mononuclear cells (PBMCs) from 8 PLWH, 4 of whom also had atherosclerosis (AS+).  To develop executable models of signaling pathways that drive cellular states in HIV-associated atherosclerosis, we developed the single-cell Boolean Omics Network Invariant Time Analysis (scBONITA) algorithm. ScBONITA (a) uses scRNA-seq data to infer Boolean regulatory rules for topologically characterized networks, (b) prioritizes genes based on their impact on signaling, (c) performs pathway analysis, and (d) maps sequenced cells to characteristic signaling states of these networks. We used scBONITA to identify dysregulated pathways in different cell-types from AS+PLWH and AS-PLWH. To compare our findings with pathways associated with HIV infection, we used scBONITA to analyze a publicly available dataset of PBMCs from subjects before and after HIV infection. Additionally, the executable Boolean networks characterized by scBONITA were used to analyze observed cellular states corresponding to the steady states of signaling pathways
+## Results
+We identified an increased subpopulation of CD8+ T cells and a decreased subpopulation of monocytes in AS+ PLWH. Enrichment analysis showed that cell-migration and lipid signaling processes were dysregulated in AS+ PLWH. Dynamic modeling of signaling pathways and pathway analysis with scBONITA provided a new perspective on the mechanisms of HIV-associated atherosclerosis. Several lipid metabolism and cell migration pathways (e.g., AGE-RAGE and PI3K-AKT signaling in CD8+ T cells and glucagon signaling and cAMP signaling in monocytes) appeared to be induced by AS rather than by HIV infection, as shown by comparison of dysregulated pathways after HIV infection and in HIV-associated atherosclerosis. Cells were mapped to distinct signaling states corresponding to these pathways that correspond to distinct phenotypes. 
+## Conclusions
+scBONITA learns dynamic models of signaling pathways to identify pathways significantly dysregulated in HIV-associated atherosclerosis. These pathways indicate that cell migration into the vascular endothelium is significantly affected by dysregulated lipid signaling in AS+ PLWH. Dynamic modeling facilitates pathway-based characterization of cellular states that are not apparent in gene expression analyses.
+## Keywords
+
+single-cell RNA sequencing; Boolean networks; HIV; atherosclerosis; pathway analysis; network modeling
+
+## Contact: 
+Juilee_Thakar@URMC.Rochester.edu; Mukta_Palshikar@URMC.Rochester.edu
+
+## Bug Tracker:
+
+https://github.com/Thakar-Lab/scBONITA/issues
+
+## Installation instructions
+
+**scBONITA requires Python 3.6 or newer.**
+
+scBONITA is currently designed to be run on SLURM systems, with minimally complicated transfer to other distributed computing systems. 
+
+We recommend that the scBONITA pipeline is used on a high-performance system with adequate computational resources. We find that the amount of RAM required for large scRNA-seq datasets is in excess of 10G; we hence don't recommend running rule inference and attractor analysis on a desktop computer.
+
+[comment]: <> ### Install the scBONITA package from pip
+
+[comment]: <>     pip install --upgrade scBONITA
+
+### Use package from GitHub
+
+1. Download a zipped folder from github.com/Thakar-Lab/scBONITA, OR
+
+1. Use git to clone this repository
+    `git clone https://github.com/YOUR-USERNAME/YOUR-REPOSITORY`
+
+Modify the C file to reflect the size of the training data set
+    - line 7: NODE is the number of nodes in the dataset (or larger)
+    - line 8: CELL is the number of cells in the dataset (or larger)
+
+Next, the C code must be compiled using the make file. Navigate to the folder in which the scBONITA package is located and in a Bash terminal, type
+    `make`
+
+Install the scBonita conda environment from the provided yml file, and activate the conda environment.
+
+## Step 1: Set up the scBONITA pipeline.
+
+scBONITA needs a training dataset in matrix-style forma; this is usually a tab or comma-delimited file with columns as cells and rows as features. The first column should be feature names and the first row should be cell IDs. The units of the expression data will typically be a variant of log2(TPM +1).
+
+
+The setup pipeline has the following parameters:
+1. dataFile: Specify the name of the file containing processed scRNA-seq data
+1. fullPipeline Should scBonita set up the entire pipeline, starting with generation of network topologies? Accepts values 0 or 1
+1. network File name of the network for which rules are to be inferred
+1. maxNodes Number of genes in the dataset
+1. maxSamples Number of cells in the dataset
+1. separator Delimiting character in dataFile. Must be one of , (comma), \s (space) or \t (tab)
+1. getKEGGPathways Should scBonita automatically identify and download KEGG pathways with genes that are in your dataset? You can specify which pathways using the 
+1. listOfKEGGPathways option, or leave it blank to download all matching KEGG pathways
+1. listOfKEGGPathways Which KEGG pathways should scBonita download? Specify the five letter pathway IDs.
+1. organism Three-letter organism code. Which organism is the dataset derived from?
+
+The following line of code runs scBONITA setup for a 20000*10000 comma-separated data set "example.csv". It downloads the KEGG pathways hsa00010 and hsa00020 for rule inference.
+
+`python3.6 pipeline.py --dataFile "example.csv" --fullPipeline 1 --maxNodes 20000 --maxSamples 10000 --separator "," --listOfKEGGPathways "00010" "00020" --getKEGGPathways 1 --organism hsa`
+
+### Step 2: Rule inference and calculation of node importance score for the networks specified in Step 1 (setup).
+
+Step 1 generates sbatch files that enter the specified slurm queue. In a typical use case, these jobs should execute automatically. We recommend that users periodically check the slurm queue and the log files.
+
+### Step 3: Pathway Analysis
+
+To perform pathway analysis, scBONITA uses the rules generated in Step 2. In addition, scBONITA requires (a) a metadata file specifiying the treatments/experimental variables for each cell and (b) a contrast file specifying the pairs of treatments to be compared.
+
+The pathway analysis script has the following arguments:
+
+1. dataFile Specify the name of the file containing processed scRNA-seq data
+1. conditions Specify the name of the file containing cell-wise condition labels, ie, metadata for each cell in the training dataset. The columns are condition variables and the rows are cells. The first column must be cell names that correspond to the columns in the training data file. The column names must contain the variables specified in the contrast file (see contrast --help for more information).
+1. contrast A text file where each line contains the two conditions (corresponding to column labels in the conditions file) are to be compared during pathway analysis.
+1. conditions_separator Separator for the conditions file. Must be one of , (comma), \s (space) or \t (tab).
+1. contrast_separator Separator for the contrast file. Must be one of , (comma), \s (space) or \t (tab).
+
+For example:
+
+`python3.6 pathwayAnalysis.py --dataFile "example.csv" --conditions "conditions.txt" --contrast "contrast.txt" --conditions_separator "\t" --contrast_separator "\t"`
+
+
+### On BlueHive (applicable only to UofR users)
+
+`- module load anaconda2/20202.07`
+
+- install scBonita conda environment from provided yml file
+
+- `source activate scBonita`
+
+- modify C file to reflect the size of the training data set
+    - line 7: NODE is the number of nodes in the dataset (or larger)
+    - line 8: CELL is the number of cells in the dataset (or larger)
+
+- `make` (compile C file)
+
+## TEST using the training data set subpop_14.bin and the test kegg pathways 00010 and 00020
+
+### step 1: setup
+
+`python3.6 pipeline.py --dataFile "subpop_14.bin" --fullPipeline 1 --maxNodes 20000 --maxSamples 10000 --separator "," --listOfKEGGPathways "00010" "00020" --getKEGGPathways 1 --organism hsa`
+
+### step 2: rule inference, node importance score calculation
+
+Usually you would just let the output from step 1 execute without interference - this is for debugging purposes only, in the usual case just periodically check the queue and the log files.
+
+`python3.6 pipeline.py --fullPipeline 0 --dataFile subpop_14.bin --network hsa00010.graphml_processed.graphml --maxNodes 20000 --maxSamples 10000`
+
+### step 3: pathway analysis
+
+`python3.6 pathwayAnalysis.py --dataFile "subpop_14.bin" --conditions "conditions.txt" --contrast "contrast.txt" --conditions_separator "\t" --contrast_separator "\t"`
+
+### step 4: attractor analysis
+
+Please see the file `src/attractorAnalysis.py` for a tutorial
