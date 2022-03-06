@@ -18,7 +18,7 @@ We show in our manuscript that scBONITA learns dynamic models of signaling pathw
 
 ## Graphical abstract
 
-![alt text](https://github.com/Thakar-Lab/scBONITA/blob/main/figure2.png?raw=true)
+![alt text](https://github.com/Thakar-Lab/scBONITA/blob/main/graphical_abstract_scBonita.png?raw=true)
 
 ## Keywords
 
