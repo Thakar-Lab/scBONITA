@@ -1,1 +1,1 @@
-Condition1, Condition2
+Treatment,Control
