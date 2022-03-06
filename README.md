@@ -97,7 +97,7 @@ For example:
 
 `python3.6 pathwayAnalysis.py --dataFile "example.csv" --conditions "conditions.txt" --contrast "contrast.txt" --conditions_separator "\t" --contrast_separator "\t"`
 
-**Please refer to the tutorial "Pathway_Analysis_With_scBONITA.ipynb" for suggestions on analysis of the output of scBONITA PA **
+**Please refer to the tutorial "Pathway_Analysis_With_scBONITA.ipynb" for suggestions on analysis of the output of scBONITA PA**
 
 ### Step 4: Attractor Analysis
 
