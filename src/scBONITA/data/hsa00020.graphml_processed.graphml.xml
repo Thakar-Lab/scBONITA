@@ -1,0 +1,330 @@
+<?xml version='1.0' encoding='utf-8'?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd"><key id="d5" for="edge" attr.name="signal" attr.type="string"/>
+<key id="d4" for="edge" attr.name="type" attr.type="string"/>
+<key id="d3" for="edge" attr.name="subtype" attr.type="string"/>
+<key id="d2" for="edge" attr.name="color" attr.type="string"/>
+<key id="d1" for="node" attr.name="type" attr.type="string"/>
+<key id="d0" for="node" attr.name="name" attr.type="string"/>
+<graph edgedefault="directed"><node id="DLD">
+  <data key="d0">DLD</data>
+  <data key="d1">gene</data>
+</node>
+<node id="IDH1">
+  <data key="d0">IDH1</data>
+  <data key="d1">ortholog</data>
+</node>
+<node id="CS">
+  <data key="d0">CS</data>
+  <data key="d1">gene</data>
+</node>
+<node id="DLAT">
+  <data key="d0">DLAT</data>
+  <data key="d1">gene</data>
+</node>
+<node id="DLST">
+  <data key="d0">DLST</data>
+  <data key="d1">gene</data>
+</node>
+<node id="ACLY">
+  <data key="d0">ACLY</data>
+  <data key="d1">gene</data>
+</node>
+<node id="FH">
+  <data key="d0">FH</data>
+  <data key="d1">gene</data>
+</node>
+<node id="PC">
+  <data key="d0">PC</data>
+  <data key="d1">gene</data>
+</node>
+<node id="OGDH"/>
+<node id="MDH1"/>
+<node id="MDH2"/>
+<node id="PDHB"/>
+<node id="SDHA"/>
+<node id="SDHB"/>
+<node id="SDHC"/>
+<node id="SDHD"/>
+<node id="POR"/>
+<node id="SUCLG2"/>
+<node id="SUCLG1"/>
+<node id="SUCLA2"/>
+<node id="IDH2"/>
+<node id="IDH3A"/>
+<node id="IDH3B"/>
+<node id="IDH3G"/>
+<node id="ACO1"/>
+<node id="ACO2"/>
+<node id="PDHA1"/>
+<node id="PCK2"/>
+<edge source="DLD" target="DLAT">
+  <data key="d2">purple</data>
+  <data key="d3">compound</data>
+  <data key="d4">ECrel</data>
+  <data key="d5">a</data>
+</edge>
+<edge source="DLD" target="OGDH">
+  <data key="d5">a</data>
+</edge>
+<edge source="DLD" target="PDHB">
+  <data key="d5">a</data>
+</edge>
+<edge source="DLD" target="PDHA1">
+  <data key="d5">a</data>
+</edge>
+<edge source="IDH1" target="IDH3A">
+  <data key="d5">a</data>
+</edge>
+<edge source="IDH1" target="IDH3B">
+  <data key="d5">a</data>
+</edge>
+<edge source="IDH1" target="IDH3G">
+  <data key="d5">a</data>
+</edge>
+<edge source="CS" target="PC">
+  <data key="d2">purple</data>
+  <data key="d3">compound</data>
+  <data key="d4">ECrel</data>
+  <data key="d5">a</data>
+</edge>
+<edge source="CS" target="ACO1">
+  <data key="d5">a</data>
+</edge>
+<edge source="CS" target="ACO2">
+  <data key="d5">a</data>
+</edge>
+<edge source="CS" target="PCK2">
+  <data key="d5">a</data>
+</edge>
+<edge source="DLAT" target="CS">
+  <data key="d2">purple</data>
+  <data key="d3">compound</data>
+  <data key="d4">ECrel</data>
+  <data key="d5">a</data>
+</edge>
+<edge source="DLAT" target="ACLY">
+  <data key="d2">purple</data>
+  <data key="d3">compound</data>
+  <data key="d4">ECrel</data>
+  <data key="d5">a</data>
+</edge>
+<edge source="DLAT" target="PDHB">
+  <data key="d5">a</data>
+</edge>
+<edge source="DLAT" target="POR">
+  <data key="d5">a</data>
+</edge>
+<edge source="DLAT" target="PDHA1">
+  <data key="d5">a</data>
+</edge>
+<edge source="DLST" target="DLD">
+  <data key="d2">purple</data>
+  <data key="d3">compound</data>
+  <data key="d4">ECrel</data>
+  <data key="d5">a</data>
+</edge>
+<edge source="DLST" target="OGDH">
+  <data key="d5">a</data>
+</edge>
+<edge source="ACLY" target="PC">
+  <data key="d2">purple</data>
+  <data key="d3">compound</data>
+  <data key="d4">ECrel</data>
+  <data key="d5">a</data>
+</edge>
+<edge source="ACLY" target="ACO1">
+  <data key="d5">a</data>
+</edge>
+<edge source="ACLY" target="ACO2">
+  <data key="d5">a</data>
+</edge>
+<edge source="ACLY" target="PCK2">
+  <data key="d5">a</data>
+</edge>
+<edge source="FH" target="SDHA">
+  <data key="d5">a</data>
+</edge>
+<edge source="FH" target="SDHB">
+  <data key="d5">a</data>
+</edge>
+<edge source="FH" target="SDHC">
+  <data key="d5">a</data>
+</edge>
+<edge source="FH" target="SDHD">
+  <data key="d5">a</data>
+</edge>
+<edge source="PC" target="POR">
+  <data key="d5">a</data>
+</edge>
+<edge source="PC" target="PCK2">
+  <data key="d5">a</data>
+</edge>
+<edge source="OGDH" target="IDH1">
+  <data key="d5">a</data>
+</edge>
+<edge source="OGDH" target="IDH2">
+  <data key="d5">a</data>
+</edge>
+<edge source="OGDH" target="IDH3A">
+  <data key="d5">a</data>
+</edge>
+<edge source="OGDH" target="IDH3B">
+  <data key="d5">a</data>
+</edge>
+<edge source="OGDH" target="IDH3G">
+  <data key="d5">a</data>
+</edge>
+<edge source="MDH1" target="CS">
+  <data key="d5">a</data>
+</edge>
+<edge source="MDH1" target="ACLY">
+  <data key="d5">a</data>
+</edge>
+<edge source="MDH1" target="PC">
+  <data key="d5">a</data>
+</edge>
+<edge source="MDH1" target="FH">
+  <data key="d5">a</data>
+</edge>
+<edge source="MDH1" target="PCK2">
+  <data key="d5">a</data>
+</edge>
+<edge source="MDH2" target="CS">
+  <data key="d5">a</data>
+</edge>
+<edge source="MDH2" target="ACLY">
+  <data key="d5">a</data>
+</edge>
+<edge source="MDH2" target="PC">
+  <data key="d5">a</data>
+</edge>
+<edge source="MDH2" target="FH">
+  <data key="d5">a</data>
+</edge>
+<edge source="MDH2" target="PCK2">
+  <data key="d5">a</data>
+</edge>
+<edge source="PDHB" target="PC">
+  <data key="d5">a</data>
+</edge>
+<edge source="PDHB" target="POR">
+  <data key="d5">a</data>
+</edge>
+<edge source="PDHB" target="PDHA1">
+  <data key="d5">a</data>
+</edge>
+<edge source="SDHA" target="SUCLG2">
+  <data key="d5">a</data>
+</edge>
+<edge source="SDHA" target="SUCLG1">
+  <data key="d5">a</data>
+</edge>
+<edge source="SDHA" target="SUCLA2">
+  <data key="d5">a</data>
+</edge>
+<edge source="SDHB" target="SUCLG2">
+  <data key="d5">a</data>
+</edge>
+<edge source="SDHB" target="SUCLG1">
+  <data key="d5">a</data>
+</edge>
+<edge source="SDHB" target="SUCLA2">
+  <data key="d5">a</data>
+</edge>
+<edge source="SDHC" target="SUCLG2">
+  <data key="d5">a</data>
+</edge>
+<edge source="SDHC" target="SUCLG1">
+  <data key="d5">a</data>
+</edge>
+<edge source="SDHC" target="SUCLA2">
+  <data key="d5">a</data>
+</edge>
+<edge source="SDHD" target="SUCLG2">
+  <data key="d5">a</data>
+</edge>
+<edge source="SDHD" target="SUCLG1">
+  <data key="d5">a</data>
+</edge>
+<edge source="SDHD" target="SUCLA2">
+  <data key="d5">a</data>
+</edge>
+<edge source="POR" target="CS">
+  <data key="d5">a</data>
+</edge>
+<edge source="POR" target="ACLY">
+  <data key="d5">a</data>
+</edge>
+<edge source="SUCLG2" target="DLST">
+  <data key="d5">a</data>
+</edge>
+<edge source="SUCLG1" target="DLST">
+  <data key="d5">a</data>
+</edge>
+<edge source="SUCLA2" target="DLST">
+  <data key="d5">a</data>
+</edge>
+<edge source="IDH2" target="IDH3A">
+  <data key="d5">a</data>
+</edge>
+<edge source="IDH2" target="IDH3B">
+  <data key="d5">a</data>
+</edge>
+<edge source="IDH2" target="IDH3G">
+  <data key="d5">a</data>
+</edge>
+<edge source="IDH3A" target="IDH1">
+  <data key="d5">a</data>
+</edge>
+<edge source="IDH3A" target="IDH2">
+  <data key="d5">a</data>
+</edge>
+<edge source="IDH3B" target="IDH1">
+  <data key="d5">a</data>
+</edge>
+<edge source="IDH3B" target="IDH2">
+  <data key="d5">a</data>
+</edge>
+<edge source="IDH3G" target="IDH1">
+  <data key="d5">a</data>
+</edge>
+<edge source="IDH3G" target="IDH2">
+  <data key="d5">a</data>
+</edge>
+<edge source="ACO1" target="IDH1">
+  <data key="d5">a</data>
+</edge>
+<edge source="ACO1" target="IDH2">
+  <data key="d5">a</data>
+</edge>
+<edge source="ACO1" target="IDH3A">
+  <data key="d5">a</data>
+</edge>
+<edge source="ACO1" target="IDH3B">
+  <data key="d5">a</data>
+</edge>
+<edge source="ACO1" target="IDH3G">
+  <data key="d5">a</data>
+</edge>
+<edge source="ACO2" target="IDH1">
+  <data key="d5">a</data>
+</edge>
+<edge source="ACO2" target="IDH2">
+  <data key="d5">a</data>
+</edge>
+<edge source="ACO2" target="IDH3A">
+  <data key="d5">a</data>
+</edge>
+<edge source="ACO2" target="IDH3B">
+  <data key="d5">a</data>
+</edge>
+<edge source="ACO2" target="IDH3G">
+  <data key="d5">a</data>
+</edge>
+<edge source="PDHA1" target="PC">
+  <data key="d5">a</data>
+</edge>
+<edge source="PDHA1" target="PDHB">
+  <data key="d5">a</data>
+</edge>
+</graph></graphml>
