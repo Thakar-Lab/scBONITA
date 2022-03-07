@@ -1033,7 +1033,41 @@ class singleCell(ruleMaker):
         gc.collect()
         return resSubmit
 
-    def assignAttractors(self, pathwayFiles=[], useMinimalRuleSet=True, simSteps=10):
+    def assignAttractors(self, pathwayFiles=[], useMinimalRuleSet=True, simSteps=10, removeZeroAttractors=True):
+
+        """Uses a dataframe of cells and the attractors to which they are assigned (usually the output of assignAttractors) to generate (a) a barplot showing the frequency of cells assigned to (selected) attractors, optionally faceted by user-specified variables and (b) a 2D scatterplot, such as a UMAP or tSNE plot, showing cells colored by the attractors to which they are assigned.
+
+        Parameters
+        ----------
+
+        plottingData: pandas DataFrame
+            Usually a 2-column dataframe where rows = cells (indices must contain the cells in the training dataset) and columns = UMAP or tSNE (or similar) dimensions
+        distanceDF: pandas DataFrame
+            Output of assignAttractors, usually. A pandas DataFrame where rows = cells (indices must contain the cells in the training dataset) and at least one column (specified by attractorsAttribute parameter, see below) contains the attractors to which the cells have been assigned
+        attractorsAttribute: str
+            The column in distanceDF which contains the attractors to which the cells have been assigned. Default is 'decider', as this is the name in the output of assignAttractors
+        allAttractors: bool
+            True if all assigned attractors are to be included in the frequency and UMAP plots. Should usually be 'True' for making preliminary analysis plots, and 'False' while making publication-quality plots, for ease of visualization and to leave out infrequent attractors.
+        numberOfAttractorsToShow: int
+            The number of attractors to be shown in the analysis plots. Used when allAttractors is False. Only the top (numberOfAttractorsToShow) most frequent attractors will be shown. The others will be collapsed into a single category "Others".
+        cmap: str
+            The matplotlib color palette to be used for the analysis plots. Consider using 'colorblind' if the number of categories/attractors is small and a continuous palette such as 'Blues' or 'Greens' if the number is large. See matplotlib documentation for more options on color palettes.
+        makeFrequencyPlots: bool
+            Should frequency plots be made?
+        frequencyGrouping: list
+            List of variables in the plottingData which should be used for faceting the frequency plots. Eg. sample, batch, disease/control, etc.
+        freqplotsFile: str
+            Path to output PDF file for frequency plots. Default plots to the standard output.
+        makeUMAP: bool
+            Should UMAP plots be made?
+        umapFile: str
+            Path to output PDF file for UMAP plots. Default plots to the standard output.
+
+        Returns
+        -------
+            None
+        """
+
         # get the networks used for rule inference - you can change this parameter when you call the function
         if len(pathwayFiles) == 0:
             pathwayFiles = glob.glob("*_processed.graphml")
@@ -1115,7 +1149,7 @@ class singleCell(ruleMaker):
                     res = np.full(
                         shape=2, fill_value=2, dtype=np.intc, order="C"
                     )  # initiate output array
-                    res = self.cluster(
+                    res = self._singleCell__cluster(
                         vals,
                         res,
                         sampleIndex,
@@ -1143,13 +1177,14 @@ class singleCell(ruleMaker):
                     + " unique attractors were identified for "
                     + pathway
                 )
-                # remove attractors that are all 0
-                testIfZero = [sum(x) for x in set(tuple(x) for x in attractorList)]
-                attractorList = [
-                    attractorList[i]
-                    for i in range(len(attractorList))
-                    if testIfZero[i] > 0
-                ]
+                if removeZeroAttractors:
+                    # remove attractors that are all 0
+                    testIfZero = [sum(x) for x in set(tuple(x) for x in attractorList)]
+                    attractorList = [
+                        attractorList[i]
+                        for i in range(len(attractorList))
+                        if testIfZero[i] > 0
+                    ]
                 attractorList = tuple(attractorList)
                 # Calculate new Distance between chosen attractors and cells
                 newdistanceDict = {}
@@ -1197,9 +1232,9 @@ class singleCell(ruleMaker):
         network,
         width,
         height,
-        allAttractors=False,
+        allAttractors=True,
         cmap="RdYlBu_r",
-        numberOfAttractorsToShow=2,
+        numberOfAttractorsToShow=False,
         outputFileName=None,
     ):
         sns.set_context("paper", font_scale=0.5)
@@ -1220,7 +1255,7 @@ class singleCell(ruleMaker):
             [i for i in attractorDF if len(set(attractorDF[i])) > 1]
         ]
         attractorDF = attractorDF.T
-
+        attractorDF2 = attractorDF
         if isinstance(allAttractors, list):
             attractorDF2 = attractorDF.reindex(columns=allAttractors)
             attractorDF2 = attractorDF2.loc[attractorDF2.sum(axis=1) != 0, :]
@@ -1228,13 +1263,21 @@ class singleCell(ruleMaker):
                 attractorDF2.sum(axis=1) != len(allAttractors), :
             ]
         else:
-            attractorDF2 = attractorDF
-            allAttractors = distanceDF.decider.value_counts()[
-                :numberOfAttractorsToShow
-            ].index.tolist()  # top n attractors where n = numberOfAttractorsToShow, default = 2
-            attractorDF2 = attractorDF.loc[:, allAttractors]
-            attractorDF2 = attractorDF2.loc[attractorDF2.sum(axis=1) != 0, :]
-            attractorDF2 = attractorDF2.loc[attractorDF2.sum(axis=1) != 2, :]
+            if not allAttractors and numberOfAttractorsToShow:
+                attractorDF2 = attractorDF
+                allAttractors = distanceDF.decider.value_counts()[
+                    :numberOfAttractorsToShow
+                ].index.tolist()  # top n attractors where n = numberOfAttractorsToShow
+                attractorDF2 = attractorDF.loc[:, allAttractors]
+                attractorDF2 = attractorDF2.loc[attractorDF2.sum(axis=1) != 0, :]
+                attractorDF2 = attractorDF2.loc[attractorDF2.sum(axis=1) != numberOfAttractorsToShow, :]
+            else:
+                if not allAttractors and not numberOfAttractorsToShow:
+                    attractorDF2 = attractorDF
+                    allAttractors = distanceDF.decider.value_counts().index.tolist()  # top n attractors where n = numberOfAttractorsToShow
+                    attractorDF2 = attractorDF.loc[:, allAttractors]
+                    attractorDF2 = attractorDF2.loc[attractorDF2.sum(axis=1) != 0, :]
+                    attractorDF2 = attractorDF2.loc[attractorDF2.sum(axis=1) != numberClusters, :]                    
         if attractorDF2.shape[1] > 1:
             ax = sns.clustermap(
                 attractorDF2,
@@ -1291,7 +1334,7 @@ class singleCell(ruleMaker):
         numberOfAttractorsToShow=2,
         cmap="colorblind",
         makeFrequencyPlots=True,
-        frequencyGrouping=[],
+        frequencyGrouping="",
         freqplotsFile="",
         makeUMAP=True,
         umapFile="",
@@ -1316,8 +1359,8 @@ class singleCell(ruleMaker):
             The matplotlib color palette to be used for the analysis plots. Consider using 'colorblind' if the number of categories/attractors is small and a continuous palette such as 'Blues' or 'Greens' if the number is large. See matplotlib documentation for more options on color palettes.
         makeFrequencyPlots: bool
             Should frequency plots be made?
-        frequencyGrouping: list
-            List of variables in the plottingData which should be used for faceting the frequency plots. Eg. sample, batch, disease/control, etc.
+        frequencyGrouping: str
+            The variable in the plottingData columns which should be used for faceting the frequency plots. Eg. sample, batch, disease/control, etc.
         freqplotsFile: str
             Path to output PDF file for frequency plots. Default plots to the standard output.
         makeUMAP: bool
@@ -1391,7 +1434,7 @@ class singleCell(ruleMaker):
                         palette[attr] = attrColors[attr]
                     else:
                         palette[attr] = (0.75, 0.75, 0.75)
-            if len(frequencyGrouping) > 0:
+            if frequencyGrouping is not "":
                 histData = (
                     plottingData.groupby(by=frequencyGrouping)["Attractors"]
                     .value_counts(normalize=True)
@@ -1399,18 +1442,19 @@ class singleCell(ruleMaker):
                     .rename("Percent")
                     .reset_index()
                 )
+                histData.columns = [frequencyGrouping, "Attractors", "Percent"]
                 ax = sns.catplot(
                     data=histData,
-                    y="Sample",
-                    x="Percent",
-                    hue="Attractors",
-                    col="Condition",
-                    palette=palette,
+                    y='Attractors',
+                    x='Percent',
+                    col=frequencyGrouping,
+                    #palette=palette,
+                    color="black",
                     dodge=True,
                     orient="h",
                     legend=True,
                     kind="bar",
-                    sharey=False,
+                    sharey=True, sharex=True
                 )
                 ax.set(
                     xlabel="Percentage of Cells\nMapped to Attractors",
@@ -1418,21 +1462,19 @@ class singleCell(ruleMaker):
                     xlim=(0, 100),
                 )
             else:
-                print(plottingData)
                 histData = (
                     plottingData.loc[:, "Attractors"]
                     .value_counts(normalize=True)
                     .mul(100)
                     .reset_index()
                 )
-                print(histData)
                 histData.columns = ["Attractors", "Percent"]
-                print(histData)
                 ax = sns.catplot(
                     data=histData,
                     y=histData.columns[0],  #'Attractors',
                     x=histData.columns[1],  #'Percent',
-                    palette=palette,
+                    #palette=palette,
+                    color="black",
                     dodge=True,
                     orient="h",
                     legend=True,
@@ -1455,25 +1497,27 @@ class singleCell(ruleMaker):
         if makeUMAP:
             ##Make attractor UMAP plots
             plt.figure(figsize=(5, 5))
-            ax = sns.scatterplot(
+            if frequencyGrouping != "":
+                col = frequencyGrouping
+            else:
+                col = None
+            ax = sns.relplot(
                 data=plottingData,
                 edgecolor="black",
                 linewidth=1,
                 x=plottingData.columns[0],
                 y=plottingData.columns[1],
-                # x="UMAP dimension 1",
-                # y="UMAP dimension 2",
                 hue="Attractors",
+                col=col, aspect = 1,
                 palette=palette,
                 legend="full",
-                s=50,
+                s=50
             )
-            plt.legend(
-                loc="best", bbox_to_anchor=(0.5, -0.15), borderaxespad=0.0, ncol=10
-            )
-            plt.gca().set_aspect("equal", "datalim")
-            plt.tight_layout()
-            print(umapFile)
+            #plt.legend(
+            #    loc="best", borderaxespad=0.0, ncol=10 #, bbox_to_anchor=(0.5, -0.15), 
+            #)
+            plt.gca().set_aspect("equal")
+            #plt.tight_layout()
             if umapFile != "":
                 plt.show()
                 plt.clf()
