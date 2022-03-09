@@ -16,6 +16,7 @@ import scipy
 from statsmodels.stats.multitest import multipletests
 from pathlib import Path
 
+
 class singleCell(ruleMaker):
 
     """Class for single-cell experiments"""
@@ -541,7 +542,7 @@ class singleCell(ruleMaker):
 
         Parameters:
         contrast: path to a text file where each line contains the two conditions (corresponding to column labels in the conditions file) are to be compared during pathway analysis.
-        
+
         conditions: path to the file containing cell-wise condition labels, ie, metadata for each cell in the training dataset. The columns are condition   variables and the rows are cells. The first column must be cell names that correspond to the columns in the training data file. The column names must contain the variables specified in the contrast file
 
         conditions_separator: Separator for the conditions file. Must be one of 'comma', 'space' or 'tab' (spell out words, escape characters will not work)."
@@ -590,13 +591,11 @@ class singleCell(ruleMaker):
             for pathname in pathwayList:
                 ISfile = glob.glob(pathname + "*_importanceScores.csv")
                 paNetTemp = glob.glob(pathname + "*_processed.graphml")
-                if len(ISfile) > 0 and len(paNetTemp)> 0:
+                if len(ISfile) > 0 and len(paNetTemp) > 0:
                     print(ISfile[0])
                     paNetTemp = nx.read_graphml(paNetTemp[0])
                     # get nodeScores
-                    nodeScoresDF = pd.read_csv(
-                        ISfile[0]
-                    )
+                    nodeScoresDF = pd.read_csv(ISfile[0])
                     nodeScoresDF.index = list(nodeScoresDF.Node)
                     if "Importance Score" in nodeScoresDF.columns:
                         # add impact score as attribute to graph
@@ -626,9 +625,7 @@ class singleCell(ruleMaker):
                                 list(nodeScoresDF.loc[:, "MaxERS"]),
                             )
                         )
-                        nx.set_node_attributes(
-                            paNetTemp, values=obsERS, name="Max ERS"
-                        )
+                        nx.set_node_attributes(paNetTemp, values=obsERS, name="Max ERS")
                         # write out IS graph with additions
                         # Calculate RA
                         RA = {}
@@ -697,8 +694,8 @@ class singleCell(ruleMaker):
                         # print(pvals)
                         pvalDict[str(pathname)] = [
                             pvals,
-                            #str(CVdict),
-                            #str(zscore),
+                            # str(CVdict),
+                            # str(zscore),
                         ]
                         print(pvalDict[str(pathname)])
                         # add impact score as attribute to graph
@@ -708,10 +705,7 @@ class singleCell(ruleMaker):
                         if pvalDict[str(pathname)][0] < 1:
                             nx.write_graphml_lxml(
                                 paNetTemp,
-                                pathname
-                                + "_IS_"
-                                + "_vs_".join(contrasts)
-                                + ".graphml",
+                                pathname + "_IS_" + "_vs_".join(contrasts) + ".graphml",
                             )
                         nodeScoresDF.to_csv(
                             pathname
@@ -720,9 +714,7 @@ class singleCell(ruleMaker):
                         )
                         if (
                             sum(
-                                nodeScoresDF[
-                                    str("Upregulated_in_" + str(contrasts[0]))
-                                ]
+                                nodeScoresDF[str("Upregulated_in_" + str(contrasts[0]))]
                             )
                             > len(list(nodeScoresDF.index)) / 2
                         ):
@@ -745,8 +737,8 @@ class singleCell(ruleMaker):
                     str(value[0][0]),
                     "_vs_".join(contrasts),
                     str(overallUpreg[key]),
-                    #str(value[1]),
-                    #str(value[2])
+                    # str(value[1]),
+                    # str(value[2])
                 ]
             pvalDF = pd.DataFrame.from_dict(pvalDict, orient="index")
             pvalDF.columns = [
@@ -754,11 +746,15 @@ class singleCell(ruleMaker):
                 "Pathway Name",
                 "P value",
                 "Contrast",
-                str("Upregulated_in_" + str(contrasts[0]))
+                str("Upregulated_in_" + str(contrasts[0])),
             ]
-            pvalDF.loc[:, "P value"] = [float(temp) for temp in pvalDF.loc[:, "P value"]]
+            pvalDF.loc[:, "P value"] = [
+                float(temp) for temp in pvalDF.loc[:, "P value"]
+            ]
             print(pvalDF.loc[:, "P value"])
-            pvalDF.loc[:, "Adjusted P value"] = list(multipletests(list(pvalDF.loc[:, "P value"]), method='bonferroni')[1])
+            pvalDF.loc[:, "Adjusted P value"] = list(
+                multipletests(list(pvalDF.loc[:, "P value"]), method="bonferroni")[1]
+            )
             pvalDF.to_csv("pvalues_" + "_vs_".join(contrasts) + ".csv", index=False)
         del self.binMat2
 
@@ -780,7 +776,7 @@ class singleCell(ruleMaker):
             graphName,
         )
 
-    def __getPathwayName(self,hsaURL):
+    def __getPathwayName(self, hsaURL):
         fileReg = re.compile("NAME\s+(\w+.*)")
         pathwayFile = requests.get("http://rest.kegg.jp/get/" + hsaURL, stream=True)
         for line in pathwayFile.iter_lines():
@@ -1535,7 +1531,9 @@ class singleCell(ruleMaker):
         -------
             None
         """
-        pvalues.loc[:, "log10pvals"] = [-1*np.log10(temp) for temp in pvalues.loc[:, "Adjusted P value"]]
+        pvalues.loc[:, "log10pvals"] = [
+            -1 * np.log10(temp) for temp in pvalues.loc[:, "Adjusted P value"]
+        ]
         pvalues = pvalues.loc[pvalues.loc[:, "Adjusted P value"].lt(adjPValueThreshold)]
         pvalues = pvalues.sort_values("Adjusted P value", ascending=0)
         pvalues["Pathway Name"] = pvalues["Pathway Name"].str.wrap(wrap)
@@ -1563,10 +1561,10 @@ class singleCell(ruleMaker):
     def ProcessLocalSearchOutput(self, graph, graphName):
         """
         Processes the output of the local search component of scBONITA and returns a text file containing plain-text Boolean rules in the ERS, and other information such as in-degree and out-degree for each node in the network.
-        
+
         Parameters:
             graphName: name of the graphml file originally provided for rule inference
-        
+
         Returns:
             A Pandas DataFrame with the following columns:
             'Node': name of the node in the network
@@ -1576,36 +1574,39 @@ class singleCell(ruleMaker):
             'Graph': the provided graphName
             'Number_of_Nodes': number of nodes in 'graph'
             'importanceScore': the importance score of each node in 'graph' as calculated by scBONITA
-            'AvgLocalError': the average error of the local search in scBONITA-RD. 
+            'AvgLocalError': the average error of the local search in scBONITA-RD.
             'plainEquivs': the rules/equivalent rule set from the local search, in human-readable format
             'bitstringEquivs': the rules/equivalent rule set from the local search, in bitstring format - this is the internal representation of rules in scBONITA and may be ignored by users
             'minimalRules': the minimal rule set (minimizing the number of )
-        
-        """
-        
-        equivs=graphName+"_processed.graphml_equivs1.pickle"
-        print(Path(graphName), Path(equivs))
-        if Path(graphName).is_file(
-        ) and Path(equivs).is_file() and Path(
-                graphName + "_processed.graphml_importanceScores.csv").is_file():
 
+        """
+
+        equivs = graphName + "_processed.graphml_equivs1.pickle"
+        print(Path(graphName), Path(equivs))
+        if (
+            Path(graphName).is_file()
+            and Path(equivs).is_file()
+            and Path(graphName + "_processed.graphml_importanceScores.csv").is_file()
+        ):
 
             errorsName = glob.glob(str(graphName) + "*_localErrors1.pickle")[0]
             localErrors = pickle.load(open(errorsName, "rb"))
 
-            self._singleCell__inherit(graph,
-                            removeSelfEdges=False,
-                            restrictIncomingEdges=False)
+            self._singleCell__inherit(
+                graph, removeSelfEdges=False, restrictIncomingEdges=False
+            )
             equivs = pickle.load(
-                open(graphName + "_processed.graphml_equivs1.pickle", "rb"))
+                open(graphName + "_processed.graphml_equivs1.pickle", "rb")
+            )
 
             equivs = [tuple(equivs[i]) for i in range(0, len(equivs))]
-            #print(equivs)
+            # print(equivs)
             equivs_len = [len(equivs[i]) for i in range(0, len(equivs))]
 
             nodeList = list(self.nodeList)
             minimalRules = self.processERS_minimalRule(
-                graphName + "_processed.graphml_equivs1.pickle")
+                graphName + "_processed.graphml_equivs1.pickle"
+            )
             plainEquivs = {}
             bitstringEquivs = {}
             minimalRulesNodes = {}
@@ -1615,46 +1616,44 @@ class singleCell(ruleMaker):
                 for rule in ers:
                     plainRules.append(
                         self._ruleMaker__writeNode(
-                            self.nodeList.index(self.nodeList[node]),
-                            rule, self))
+                            self.nodeList.index(self.nodeList[node]), rule, self
+                        )
+                    )
                 plainEquivs[nodeList[node]] = set(plainRules)
                 bitstringEquivs[nodeList[node]] = set(
-                    tuple(ers[i]) for i in range(0, len(ers)))
+                    tuple(ers[i]) for i in range(0, len(ers))
+                )
                 minimalRulesNodes[nodeList[node]] = self._ruleMaker__writeNode(
-                    node, minimalRules[self.individualParse[node]:self.
-                                    individualParse[node + 1]], self)
-            in_degree = [
-                graph.in_degree(node)
-                for node in nodeList
-            ]
-            out_degree = [
-                graph.out_degree(node)
-                for node in nodeList
-            ]
+                    node,
+                    minimalRules[
+                        self.individualParse[node] : self.individualParse[node + 1]
+                    ],
+                    self,
+                )
+            in_degree = [graph.in_degree(node) for node in nodeList]
+            out_degree = [graph.out_degree(node) for node in nodeList]
             inOutRatio = [
                 float(inDeg + 1) / (outDeg + 1)
                 for inDeg, outDeg in zip(in_degree, out_degree)
             ]
-            #Get importance score
+            # Get importance score
             importanceScoreDF = pd.read_csv(
-                graphName + "_processed.graphml_importanceScores.csv")
+                graphName + "_processed.graphml_importanceScores.csv"
+            )
             importanceScoreDict = {}
-            for n in list(importanceScoreDF['Node']):
+            for n in list(importanceScoreDF["Node"]):
                 temp = importanceScoreDF[importanceScoreDF.Node.isin({n})]
-                importanceScoreDict[n] = list(temp['Importance Score'])[0]
+                importanceScoreDict[n] = list(temp["Importance Score"])[0]
 
-            tempdf = pd.DataFrame(list(
-                zip(nodeList, in_degree, out_degree, inOutRatio, equivs_len)),
-                                columns=[
-                                    'Node', 'In_degree', 'Out_degree',
-                                    'Equivs_len'
-                                ])
+            tempdf = pd.DataFrame(
+                list(zip(nodeList, in_degree, out_degree, inOutRatio, equivs_len)),
+                columns=["Node", "In_degree", "Out_degree", "Equivs_len"],
+            )
             tempdf["Graph"] = graphName
             tempdf["Number_of_Nodes"] = str(len(nodeList))
-            tempdf["importanceScore"] = tempdf['Node'].map(importanceScoreDict)
+            tempdf["importanceScore"] = tempdf["Node"].map(importanceScoreDict)
             tempdf["AvgLocalError"] = localErrors
-            tempdf["plainEquivs"] = tempdf['Node'].map(plainEquivs)
-            tempdf["bitstringEquivs"] = tempdf['Node'].map(bitstringEquivs)
-            tempdf["minimalRules"] = tempdf['Node'].map(minimalRulesNodes)
-            return(tempdf)
-
+            tempdf["plainEquivs"] = tempdf["Node"].map(plainEquivs)
+            tempdf["bitstringEquivs"] = tempdf["Node"].map(bitstringEquivs)
+            tempdf["minimalRules"] = tempdf["Node"].map(minimalRulesNodes)
+            return tempdf
