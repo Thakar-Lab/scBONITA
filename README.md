@@ -73,7 +73,8 @@ The setup pipeline has the following parameters:
 1. listOfKEGGPathways Which KEGG pathways should scBonita download? Specify the five letter pathway IDs.
 1. organism Three-letter organism code. Which organism is the dataset derived from?
 1. cvThreshold: Minimum coefficient of variation to retain genes for scBONITA analysis
-The following line of code runs scBONITA setup for a 20000*10000 comma-separated data set "example.csv". It downloads the KEGG pathways hsa00010 and hsa00020 for rule inference.
+
+The following command runs scBONITA setup for a 20000*10000 comma-separated data set "example.csv". It downloads the KEGG pathways hsa00010 and hsa00020 for rule inference.
 
 `python3.6 pipeline.py --dataFile "example.csv" --fullPipeline 1 --maxNodes 20000 --maxSamples 10000 --separator "," --listOfKEGGPathways "00010" "00020" --getKEGGPathways 1 --organism hsa cvThreshold None`
 
@@ -83,19 +84,40 @@ Step 1 generates sbatch files that enter the specified slurm queue. In a typical
 
 ### Step 3: Pathway Analysis
 
-To perform pathway analysis, scBONITA uses the rules generated in Step 2. In addition, scBONITA requires (a) a metadata file specifiying the treatments/experimental variables for each cell and (b) a contrast file specifying the pairs of treatments to be compared.
-
 The pathway analysis script has the following arguments:
 
-1. dataFile Specify the name of the file containing processed scRNA-seq data
-1. conditions Specify the name of the file containing cell-wise condition labels, ie, metadata for each cell in the training dataset. The columns are condition variables and the rows are cells. The first column must be cell names that correspond to the columns in the training data file. The column names must contain the variables specified in the contrast file (see contrast --help for more information).
-1. contrast A text file where each line contains the two conditions (corresponding to column labels in the conditions file) are to be compared during pathway analysis.
-1. conditions_separator Separator for the conditions file. Must be one of , (comma), \s (space) or \t (tab).
-1. contrast_separator Separator for the contrast file. Must be one of , (comma), \s (space) or \t (tab).
+* **dataFile** 
+    
+    Specify the name of the file containing processed scRNA-seq data
 
-For example:
 
-`python3.6 pathwayAnalysis.py --dataFile "example.csv" --conditions "conditions.txt" --contrast "contrast.txt" --conditions_separator "\t" --contrast_separator "\t"`
+* **conditions**
+    
+    Specify the name of the file containing cell-wise condition labels, ie, metadata for each cell in the training dataset. The columns are condition variables and the rows are cells. The first column must be cell names that correspond to the columns in the training data file. The column names must contain the variables specified in the contrast file (see contrast --help for more information).
+
+
+* **contrast**
+    
+    A text file where each line contains the two conditions (corresponding to column labels in the conditions file) are to be compared during pathway analysis.
+
+
+* **conditions_separator**
+    
+    Separator for the conditions file. Must be one of 'comma', 'space' or 'tab' (spell out words, escape characters will not work).",
+
+
+* **contrast_separator**
+    
+    Separator for the contrast file. Must be one of 'comma', 'space' or 'tab' (spell out words, escape characters will not work).",
+
+* **pathwayList**
+
+    Paths to GRAPHML files that should be used for scBONITA analysis. Usually networks from non-KEGG sources, saved in GRAPHML format. The default value is to use sll the networks initially used for rule inference.
+   
+Example usage with the provided example files in the `data` folder:
+
+> `python3.6 pathwayAnalysis.py --dataFile "data/trainingData.csv" --conditions "data/conditions.txt" --contrast "data/contrast.txt" --conditions_separator "comma" --contrast_separator "comma" --pathwayList "hsa00010"`
+
 
 **Please refer to the tutorial "Pathway_Analysis_With_scBONITA.ipynb" for suggestions on analysis of the output of scBONITA PA**
 
