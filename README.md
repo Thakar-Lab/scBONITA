@@ -5,8 +5,11 @@
 ## Publication: 
 
 Executable models of pathways built using single-cell RNA seq data reveal immune signaling dysregulations in people living with HIV and atherosclerosis
+
 __Mukta G. Palshikar, Rohith Palli, Alicia Tyrell, Sanjay Maggirwar, Giovanni Schifitto, Meera V. Singh, Juilee Thakar__
+
 medRxiv 2022.03.07.22271522; doi: https://doi.org/10.1101/2022.03.07.22271522
+
 This article is a preprint and has not been certified by peer review. It reports new medical research that has yet to be evaluated and so should not be used to guide clinical practice.
 
 ## Description
