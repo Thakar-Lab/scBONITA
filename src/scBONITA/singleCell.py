@@ -11,7 +11,10 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from ast import literal_eval
 import random
-
+import os
+import scipy
+from statsmodels.stats.multitest import multipletests
+from pathlib import Path
 
 class singleCell(ruleMaker):
 
@@ -409,7 +412,9 @@ class singleCell(ruleMaker):
         self.__setupEmptyKOKI()
 
         # Genetic algorithm
-        population, logbook = self._ruleMaker__eaMuPlusLambdaAdaptive(scSyncBoolC, graph)
+        population, logbook = self._ruleMaker__eaMuPlusLambdaAdaptive(
+            scSyncBoolC, graph
+        )
         out1, out2, model = self._ruleMaker__findPopBest(population)
         with open(graph + "_rules_GA.txt", "w") as text_file:
             text_file.write(model.writeModel(out2, model))
@@ -441,7 +446,9 @@ class singleCell(ruleMaker):
         pickle.dump(bruteout2, open(graph + "_bruteout2.pickle", "wb"))
 
         # Importance score calculation
-        importanceScores = self._ruleMaker__calcImportance("", self, importanceScore, graph)
+        importanceScores = self._ruleMaker__calcImportance(
+            "", self, importanceScore, graph
+        )
         print(importanceScores)
 
     def __scorePathway(self, RAs, pathImportances, pathname):
@@ -500,7 +507,7 @@ class singleCell(ruleMaker):
         maxfreq = n.max()
         # Set a clean upper y-axis limit.
         plt.ylim(ymax=np.ceil(maxfreq / 10) * 10 if maxfreq % 10 else maxfreq + 10)
-        plt.title(getPathwayName(str(pathname)))
+        plt.title(self.__getPathwayName(str(pathname)))
         axes = plt.gca()
         y_min, y_max = axes.get_ylim()
         plt.text(
@@ -520,37 +527,56 @@ class singleCell(ruleMaker):
         plt.close()
         return zscore, impactScore, CVdict
 
-    def run_pathway_analysis_from_outs(
-        self, contrast, conditions, conditionsSep="\t", contrastSep="\t"
+    def run_pathway_analysis(
+        self,
+        contrast,
+        conditions,
+        conditionsSep="\t",
+        contrastSep="\t",
+        pathwayList=None,
     ):
+
+        """
+        Uses the output files from rule determination to perform pathway analysis for either specified networks or all the networks initially used for rule inference.
+
+        Parameters:
+        contrast: path to a text file where each line contains the two conditions (corresponding to column labels in the conditions file) are to be compared during pathway analysis.
+        
+        conditions: path to the file containing cell-wise condition labels, ie, metadata for each cell in the training dataset. The columns are condition   variables and the rows are cells. The first column must be cell names that correspond to the columns in the training data file. The column names must contain the variables specified in the contrast file
+
+        conditions_separator: Separator for the conditions file. Must be one of 'comma', 'space' or 'tab' (spell out words, escape characters will not work)."
+
+        contrast_separator: Separator for the contrast file. Must be one of 'comma', 'space' or 'tab' (spell out words, escape characters will not work)."
+
+        pathwayList: Paths to GRAPHML files that should be used for scBONITA analysis. Usually networks from non-KEGG sources, saved in GRAPHML format
+        The default value is to use sll the networks initially used for rule inference.
+        """
+        if pathwayList is None:
+            pathwayList = list(self.pathwayGraphs.keys())
         self.binMat2 = self.binMat.A
         self.expMat2 = self.expMat.A
         pvalDict = {}
         overallUpreg = {}
         # open the set of differences to be considered
         contrastList = []
-        for row in csv.reader(open(contrast), delimiter=contrastSep):
-            contrastList.append(row)
-        # contrasts=contrasts[0] for testing purposes, assume that we have just one contrast (true in our AS+/AS- case study)
-        conditions = pd.read_csv(conditions, sep=conditionsSep)
+        contrast = pd.read_csv(contrast, sep=contrastSep, header=None)
+        # for row in csv.reader(open(contrast), delimiter=contrastSep):
+        #    contrastList.append(list(row))
+        for index, row in contrast.iterrows():
+            contrastList.append([row[0], row[1]])
+        print(contrastList)
+        conditions = pd.read_csv(conditions, sep=conditionsSep, index_col=0)
         print(conditions)
-        # self.add_wikipathways(minOverlap=1)
-
         for contrasts in contrastList:
-            condition1 = conditions[[str(contrasts[0])]]
-            condition2 = conditions[[str(contrasts[1])]]
-            # cells_condition1=(conditions[conditions[str(contrasts[0])] == 1])['Samples'].tolist()
-            cells_condition1 = conditions.loc[
-                conditions[str(contrasts[0])] == 1, list(conditions.columns)[0]
-            ]
-            cells_condition1 = list(cells_condition1)
-            print(len(cells_condition1))
-            # cells_condition2=(conditions[conditions[str(contrasts[1])] == 1])['Samples'].tolist()
-            cells_condition2 = conditions.loc[
-                conditions[str(contrasts[1])] == 1, list(conditions.columns)[0]
-            ]
-            cells_condition2 = list(cells_condition2)
-            print(len(cells_condition1))
+            print(contrasts)
+            # condition1 = conditions.loc[:, contrasts[0]] #[[str(contrasts[0])]]
+            # condition2 = conditions.loc[:, contrasts[1]]#[[str(contrasts[1])]]
+            cells_condition1 = list(
+                conditions.index[conditions.loc[:, contrasts[0]] == 1]
+            )
+            cells_condition2 = list(
+                conditions.index[conditions.loc[:, contrasts[1]] == 1]
+            )
             index_condition1 = [
                 self.sampleList.index(i)
                 for i in set(cells_condition1).intersection(set(self.sampleList))
@@ -559,226 +585,150 @@ class singleCell(ruleMaker):
                 self.sampleList.index(i)
                 for i in set(cells_condition2).intersection(set(self.sampleList))
             ]
-
-            # print(cells_condition1)
-            # print(len(set(cells_condition1).intersection(set(self.sampleList))))
-            # print(len(set(cells_condition2).intersection(set(self.sampleList))))
-
             # make RA - in the case of single cell experiments, find the proportion of cells in which the gene is expressed
-            for pathname in list(self.pathwayGraphs.keys()):
-                print(pathname)
-
-                if os.path.exists(pathname[:-8] + "_IS.graphml") or os.path.exists(
-                    pathname[:-8] + ".graphml_processed.graphml_importanceScores.csv"
-                ):
-                    """
-                    if os.path.exists(pathname[:-8]+"_IS.graphml"):
-                        print(str(pathname[:-8]+"_IS.graphml"))
-
-                        paNetTemp = nx.read_graphml(pathname[:-8]+"_IS.graphml")
-                        # get nodeScores
-                        nodeScores = dict(paNetTemp.nodes(data='importanceScore', default=np.nan))
-
-                        # Calculate RA
-                        RA={}
-                        for node in list(paNetTemp.nodes()):
-                            node_index=self.geneList.index(node)
-                            expression_condition1=np.mean(self.binMat2[node_index, index_condition1].tolist())
-                            expression_condition2=np.mean(self.binMat2[node_index, index_condition2].tolist())
-                            RA[node]=abs(expression_condition1-expression_condition2)
-
-                        # add RA as attribute to graph
-                        nx.set_node_attributes(paNetTemp, values=RA, name='relativeAbundance')
-
-                        z_scores=[]
-                        # iterate over comparisons for each pathway and calculate z score
-                        zscore, impactScore = self.scorePathway(RA, nodeScores)
-                        z_scores.append(zscore)
-                        pvals = scipy.stats.norm.sf(z_scores) # calculate p value
-                        #print(pvals)
-                        pvalDict[str(pathname)]=pvals
-
+            # for pathname in list(self.pathwayGraphs.keys()):
+            for pathname in pathwayList:
+                ISfile = glob.glob(pathname + "*_importanceScores.csv")
+                paNetTemp = glob.glob(pathname + "*_processed.graphml")
+                if len(ISfile) > 0 and len(paNetTemp)> 0:
+                    print(ISfile[0])
+                    paNetTemp = nx.read_graphml(paNetTemp[0])
+                    # get nodeScores
+                    nodeScoresDF = pd.read_csv(
+                        ISfile[0]
+                    )
+                    nodeScoresDF.index = list(nodeScoresDF.Node)
+                    if "Importance Score" in nodeScoresDF.columns:
                         # add impact score as attribute to graph
-                        nx.set_node_attributes(paNetTemp, values=impactScore, name='impactScore')
-
-                        # write out graph with additions
-                        nx.write_graphml_lxml(paNetTemp, pathname[:-8]+"_IS_"+"_vs_".join(contrasts)+".graphml")
-                    else:
-                    """
-                    if os.path.exists(
-                        pathname[:-8]
-                        + ".graphml_processed.graphml_importanceScores.csv"
-                    ):
-                        print(
-                            pathname[:-8]
-                            + ".graphml_processed.graphml_importanceScores.csv"
+                        nodeScores = dict(
+                            zip(
+                                list(nodeScoresDF.index),
+                                list(nodeScoresDF.loc[:, "Importance Score"]),
+                            )
                         )
-                        paNetTemp = nx.read_graphml(
-                            pathname[:-8] + ".graphml_processed.graphml"
+                        nx.set_node_attributes(
+                            paNetTemp, values=nodeScores, name="importanceScore"
                         )
-                        # get nodeScores
-                        nodeScoresDF = pd.read_csv(
-                            pathname[:-8]
-                            + ".graphml_processed.graphml_importanceScores.csv"
+                        # add obsERS as attribute to graph
+                        obsERS = dict(
+                            zip(
+                                list(nodeScoresDF.index),
+                                list(nodeScoresDF.loc[:, "ObsERS"]),
+                            )
                         )
-                        nodeScoresDF.index = list(nodeScoresDF.Node)
-                        # if "Strat3_IS" in nodeScoresDF.columns:
-                        if "importanceScore" in nodeScoresDF.columns:
-                            # add impact score as attribute to graph
-                            nodeScores = dict(
-                                zip(
-                                    list(nodeScoresDF.index),
-                                    list(nodeScoresDF.loc[:, "importanceScore"]),
-                                )
+                        nx.set_node_attributes(
+                            paNetTemp, values=obsERS, name="Observed ERS"
+                        )
+                        # add maxERS as attribute to graph
+                        maxERS = dict(
+                            zip(
+                                list(nodeScoresDF.index),
+                                list(nodeScoresDF.loc[:, "MaxERS"]),
                             )
-                            nx.set_node_attributes(
-                                paNetTemp, values=nodeScores, name="importanceScore"
+                        )
+                        nx.set_node_attributes(
+                            paNetTemp, values=obsERS, name="Max ERS"
+                        )
+                        # write out IS graph with additions
+                        # Calculate RA
+                        RA = {}
+                        upreg_condition1 = {}
+                        expression_condition1 = {}
+                        expression_condition2 = {}
+                        nodeScoresDF[str(contrasts[0])] = np.nan
+                        nodeScoresDF[str(contrasts[1])] = np.nan
+                        for node in list(nodeScoresDF.index):
+                            node_index = self.geneList.index(node)
+                            expression_condition1[node] = np.mean(
+                                self.expMat2[node_index, index_condition1].tolist()
                             )
-                            # add obsERS as attribute to graph
-                            obsERS = dict(
-                                zip(
-                                    list(nodeScoresDF.index),
-                                    list(nodeScoresDF.loc[:, "ObsERS"]),
-                                )
+                            expression_condition2[node] = np.mean(
+                                self.expMat2[node_index, index_condition2].tolist()
                             )
-                            nx.set_node_attributes(
-                                paNetTemp, values=obsERS, name="Observed ERS"
-                            )
-                            # add maxERS as attribute to graph
-                            maxERS = dict(
-                                zip(
-                                    list(nodeScoresDF.index),
-                                    list(nodeScoresDF.loc[:, "MaxERS"]),
-                                )
-                            )
-                            nx.set_node_attributes(
-                                paNetTemp, values=obsERS, name="Max ERS"
-                            )
-                            # write out IS graph with additions
-                            # nx.write_graphml_lxml(paNetrTemp, pathname[:-8]+"_IS.graphml")
-                            # Calculate RA
-                            RA = {}
-                            upreg_condition1 = {}
-                            expression_condition1 = {}
-                            expression_condition2 = {}
-                            binexpression_condition1 = {}
-                            binexpression_condition2 = {}
-                            nodeScoresDF[str(contrasts[0])] = np.nan
-                            nodeScoresDF[str(contrasts[1])] = np.nan
-                            nodeScoresDF["BIN_" + str(contrasts[0])] = np.nan
-                            nodeScoresDF["BIN_" + str(contrasts[1])] = np.nan
-                            for node in list(nodeScoresDF.index):
-                                node_index = self.geneList.index(node)
-                                binexpression_condition1[node] = np.mean(
-                                    self.binMat2[node_index, index_condition1].tolist()
-                                )
-                                binexpression_condition2[node] = np.mean(
-                                    self.binMat2[node_index, index_condition2].tolist()
-                                )
-                                expression_condition1[node] = np.mean(
-                                    self.expMat2[node_index, index_condition1].tolist()
-                                )
-                                expression_condition2[node] = np.mean(
-                                    self.expMat2[node_index, index_condition2].tolist()
-                                )
-                                print(
-                                    [
-                                        expression_condition1[node],
-                                        expression_condition2[node],
-                                    ]
-                                )
-                                RA[node] = (
-                                    expression_condition1[node]
-                                    - expression_condition2[node]
-                                )
-                                if (
-                                    expression_condition1[node]
-                                    > expression_condition2[node]
-                                ):
-                                    upreg_condition1[node] = True
-                                else:
-                                    upreg_condition1[node] = False
-                            nodeScoresDF[str(contrasts[0])] = nodeScoresDF["Node"].map(
-                                expression_condition1
-                            )
-                            nodeScoresDF[str(contrasts[1])] = nodeScoresDF["Node"].map(
-                                expression_condition2
-                            )
-                            nodeScoresDF["BIN_" + str(contrasts[0])] = nodeScoresDF[
-                                "Node"
-                            ].map(binexpression_condition1)
-                            nodeScoresDF["BIN_" + str(contrasts[1])] = nodeScoresDF[
-                                "Node"
-                            ].map(binexpression_condition2)
-                            nodeScoresDF[
-                                str("Upregulated_in_" + str(contrasts[0]))
-                            ] = nodeScoresDF["Node"].map(upreg_condition1)
-                            # add RA as attribute to graph
-                            nx.set_node_attributes(
-                                paNetTemp, values=RA, name="relativeAbundance"
-                            )
-                            nx.set_node_attributes(
-                                paNetTemp,
-                                values=expression_condition1,
-                                name=str(contrasts[0]),
-                            )
-                            nx.set_node_attributes(
-                                paNetTemp,
-                                values=expression_condition2,
-                                name=str(contrasts[1]),
-                            )
-                            nx.set_node_attributes(
-                                paNetTemp,
-                                values=upreg_condition1,
-                                name=str("Upregulated_in_" + str(contrasts[0])),
-                            )
-                            z_scores = []
-                            modRA = {}
-                            for node in list(nodeScoresDF.index):
-                                modRA[node] = abs(RA[node])
-                            # iterate over comparisons for each pathway and calculate z score
-                            zscore, impactScore, CVdict = self.scorePathway(
-                                modRA, nodeScores, pathname[:-8]
-                            )
-                            z_scores.append(zscore)
-                            pvals = scipy.stats.norm.sf(z_scores)  # calculate p value
-                            # print(pvals)
-                            pvalDict[str(pathname)] = [
-                                pvals,
-                                str(CVdict),
-                                str(zscore),
-                                str(sum(impactScore.values())),
-                                str(mean(impactScore.values())),
-                            ]
-
-                            # add impact score as attribute to graph
-                            # nx.set_node_attributes(paNetTemp, values=impactScore, name='impactScore')
-
-                            # write out graph with additions if pval < 0.05
-                            if pvalDict[str(pathname)][0] < 0.05:
-                                nx.write_graphml_lxml(
-                                    paNetTemp,
-                                    pathname[:-8]
-                                    + "_IS_"
-                                    + "_vs_".join(contrasts)
-                                    + ".graphml",
-                                )
-                            nodeScoresDF.to_csv(
-                                pathname[:-8]
-                                + ".graphml_processed.graphml_importanceScores.csv",
-                                index=False,
+                            RA[node] = (
+                                expression_condition1[node]
+                                - expression_condition2[node]
                             )
                             if (
-                                sum(
-                                    nodeScoresDF[
-                                        str("Upregulated_in_" + str(contrasts[0]))
-                                    ]
-                                )
-                                > len(list(nodeScoresDF.index)) / 2
+                                expression_condition1[node]
+                                > expression_condition2[node]
                             ):
-                                overallUpreg[str(pathname)] = str("True")
+                                upreg_condition1[node] = True
                             else:
-                                overallUpreg[str(pathname)] = str("False")
+                                upreg_condition1[node] = False
+                        nodeScoresDF[str(contrasts[0])] = nodeScoresDF["Node"].map(
+                            expression_condition1
+                        )
+                        nodeScoresDF[str(contrasts[1])] = nodeScoresDF["Node"].map(
+                            expression_condition2
+                        )
+                        nodeScoresDF[
+                            str("Upregulated_in_" + str(contrasts[0]))
+                        ] = nodeScoresDF["Node"].map(upreg_condition1)
+                        # add RA as attribute to graph
+                        nx.set_node_attributes(
+                            paNetTemp, values=RA, name="relativeAbundance"
+                        )
+                        nx.set_node_attributes(
+                            paNetTemp,
+                            values=expression_condition1,
+                            name=str(contrasts[0]),
+                        )
+                        nx.set_node_attributes(
+                            paNetTemp,
+                            values=expression_condition2,
+                            name=str(contrasts[1]),
+                        )
+                        nx.set_node_attributes(
+                            paNetTemp,
+                            values=upreg_condition1,
+                            name=str("Upregulated_in_" + str(contrasts[0])),
+                        )
+                        z_scores = []
+                        modRA = {}
+                        for node in list(nodeScoresDF.index):
+                            modRA[node] = abs(RA[node])
+                        # iterate over comparisons for each pathway and calculate z score
+                        zscore, impactScore, CVdict = self.__scorePathway(
+                            modRA, nodeScores, pathname[:-8]
+                        )
+                        z_scores.append(zscore)
+                        pvals = scipy.stats.norm.sf(z_scores)  # calculate p value
+                        # print(pvals)
+                        pvalDict[str(pathname)] = [
+                            pvals,
+                            #str(CVdict),
+                            #str(zscore),
+                        ]
+                        print(pvalDict[str(pathname)])
+                        # add impact score as attribute to graph
+                        # nx.set_node_attributes(paNetTemp, values=impactScore, name='impactScore')
+
+                        # write out graph with additions if pval < 0.05
+                        if pvalDict[str(pathname)][0] < 1:
+                            nx.write_graphml_lxml(
+                                paNetTemp,
+                                pathname
+                                + "_IS_"
+                                + "_vs_".join(contrasts)
+                                + ".graphml",
+                            )
+                        nodeScoresDF.to_csv(
+                            pathname
+                            + ".graphml_processed.graphml_importanceScores.csv",
+                            index=False,
+                        )
+                        if (
+                            sum(
+                                nodeScoresDF[
+                                    str("Upregulated_in_" + str(contrasts[0]))
+                                ]
+                            )
+                            > len(list(nodeScoresDF.index)) / 2
+                        ):
+                            overallUpreg[str(pathname)] = str("True")
+                        else:
+                            overallUpreg[str(pathname)] = str("False")
                 else:
                     print("No output for " + pathname)
                     # pvalDict[str(pathname)]=["None"]
@@ -789,34 +739,26 @@ class singleCell(ruleMaker):
             # fh.write(','.join(["Pathway ID", "Pathway Name", "P value", "Contrast", str("Upregulated_in_"+str(condition1)+"\n")]))
             for key, value in pvalDict.items():
                 key = str(key)
-                # print(key, str(getPathwayName(key)), str(value[0]))
-                # fh.write(','.join([key, str(getPathwayName(key[:8])), str(value[0]),"_vs_".join(contrasts), str(overallUpreg[key[:8]])]))
-                # fh.write(','.join([key, str(getPathwayName(key[:8])), str(value[0]), "_vs_".join(contrasts)])) #, str(overallUpreg[key])]))
                 pvalDict[key] = [
                     key,
-                    str(getPathwayName(key[:8])),
+                    str(self.__getPathwayName(key)),
                     str(value[0][0]),
                     "_vs_".join(contrasts),
                     str(overallUpreg[key]),
-                    str(value[1]),
-                    str(value[2]),
-                    str(value[3]),
-                    str(value[4]),
+                    #str(value[1]),
+                    #str(value[2])
                 ]
-                # fh.write("\n")
-            # fh.close()
             pvalDF = pd.DataFrame.from_dict(pvalDict, orient="index")
             pvalDF.columns = [
                 "Pathway ID",
                 "Pathway Name",
                 "P value",
                 "Contrast",
-                str("Upregulated_in_" + str(contrasts[0])),
-                "CVdict",
-                "zscore",
-                "impactScore",
-                "meanNodewiseImpactScore",
+                str("Upregulated_in_" + str(contrasts[0]))
             ]
+            pvalDF.loc[:, "P value"] = [float(temp) for temp in pvalDF.loc[:, "P value"]]
+            print(pvalDF.loc[:, "P value"])
+            pvalDF.loc[:, "Adjusted P value"] = list(multipletests(list(pvalDF.loc[:, "P value"]), method='bonferroni')[1])
             pvalDF.to_csv("pvalues_" + "_vs_".join(contrasts) + ".csv", index=False)
         del self.binMat2
 
@@ -838,7 +780,7 @@ class singleCell(ruleMaker):
             graphName,
         )
 
-    def __getPathwayName(hsaURL):
+    def __getPathwayName(self,hsaURL):
         fileReg = re.compile("NAME\s+(\w+.*)")
         pathwayFile = requests.get("http://rest.kegg.jp/get/" + hsaURL, stream=True)
         for line in pathwayFile.iter_lines():
@@ -846,6 +788,7 @@ class singleCell(ruleMaker):
             result = fileReg.match(line)
             if result:
                 return result.group(1)
+        return hsaURL
 
     def processERS_minimalRule(self, equivsName):
         """Create an individual from the ERS generated by the local search, for importance score calculation"""
@@ -1033,7 +976,13 @@ class singleCell(ruleMaker):
         gc.collect()
         return resSubmit
 
-    def assignAttractors(self, pathwayFiles=[], useMinimalRuleSet=True, simSteps=10, removeZeroAttractors=True):
+    def assignAttractors(
+        self,
+        pathwayFiles=[],
+        useMinimalRuleSet=True,
+        simSteps=10,
+        removeZeroAttractors=True,
+    ):
 
         """Uses a dataframe of cells and the attractors to which they are assigned (usually the output of assignAttractors) to generate (a) a barplot showing the frequency of cells assigned to (selected) attractors, optionally faceted by user-specified variables and (b) a 2D scatterplot, such as a UMAP or tSNE plot, showing cells colored by the attractors to which they are assigned.
 
@@ -1270,14 +1219,20 @@ class singleCell(ruleMaker):
                 ].index.tolist()  # top n attractors where n = numberOfAttractorsToShow
                 attractorDF2 = attractorDF.loc[:, allAttractors]
                 attractorDF2 = attractorDF2.loc[attractorDF2.sum(axis=1) != 0, :]
-                attractorDF2 = attractorDF2.loc[attractorDF2.sum(axis=1) != numberOfAttractorsToShow, :]
+                attractorDF2 = attractorDF2.loc[
+                    attractorDF2.sum(axis=1) != numberOfAttractorsToShow, :
+                ]
             else:
                 if not allAttractors and not numberOfAttractorsToShow:
                     attractorDF2 = attractorDF
-                    allAttractors = distanceDF.decider.value_counts().index.tolist()  # top n attractors where n = numberOfAttractorsToShow
+                    allAttractors = (
+                        distanceDF.decider.value_counts().index.tolist()
+                    )  # top n attractors where n = numberOfAttractorsToShow
                     attractorDF2 = attractorDF.loc[:, allAttractors]
                     attractorDF2 = attractorDF2.loc[attractorDF2.sum(axis=1) != 0, :]
-                    attractorDF2 = attractorDF2.loc[attractorDF2.sum(axis=1) != numberClusters, :]                    
+                    attractorDF2 = attractorDF2.loc[
+                        attractorDF2.sum(axis=1) != numberClusters, :
+                    ]
         if attractorDF2.shape[1] > 1:
             ax = sns.clustermap(
                 attractorDF2,
@@ -1434,7 +1389,7 @@ class singleCell(ruleMaker):
                         palette[attr] = attrColors[attr]
                     else:
                         palette[attr] = (0.75, 0.75, 0.75)
-            if frequencyGrouping is not "":
+            if frequencyGrouping != "":
                 histData = (
                     plottingData.groupby(by=frequencyGrouping)["Attractors"]
                     .value_counts(normalize=True)
@@ -1445,16 +1400,17 @@ class singleCell(ruleMaker):
                 histData.columns = [frequencyGrouping, "Attractors", "Percent"]
                 ax = sns.catplot(
                     data=histData,
-                    y='Attractors',
-                    x='Percent',
+                    y="Attractors",
+                    x="Percent",
                     col=frequencyGrouping,
-                    #palette=palette,
+                    # palette=palette,
                     color="black",
                     dodge=True,
                     orient="h",
                     legend=True,
                     kind="bar",
-                    sharey=True, sharex=True
+                    sharey=True,
+                    sharex=True,
                 )
                 ax.set(
                     xlabel="Percentage of Cells\nMapped to Attractors",
@@ -1473,7 +1429,7 @@ class singleCell(ruleMaker):
                     data=histData,
                     y=histData.columns[0],  #'Attractors',
                     x=histData.columns[1],  #'Percent',
-                    #palette=palette,
+                    # palette=palette,
                     color="black",
                     dodge=True,
                     orient="h",
@@ -1508,16 +1464,17 @@ class singleCell(ruleMaker):
                 x=plottingData.columns[0],
                 y=plottingData.columns[1],
                 hue="Attractors",
-                col=col, aspect = 1,
+                col=col,
+                aspect=1,
                 palette=palette,
                 legend="full",
-                s=50
+                s=50,
             )
-            #plt.legend(
-            #    loc="best", borderaxespad=0.0, ncol=10 #, bbox_to_anchor=(0.5, -0.15), 
-            #)
+            # plt.legend(
+            #    loc="best", borderaxespad=0.0, ncol=10 #, bbox_to_anchor=(0.5, -0.15),
+            # )
             plt.gca().set_aspect("equal")
-            #plt.tight_layout()
+            # plt.tight_layout()
             if umapFile != "":
                 plt.show()
                 plt.clf()
@@ -1540,14 +1497,16 @@ class singleCell(ruleMaker):
 
         return None
 
-    def makeBubblePlots(pvalues=pd.DataFrame(),
-                    adjPValueThreshold=0.05,
-                    wrap=25,
-                    height=8,
-                    width=10,
-                    palette="colorblind",
-                    saveAsPDF=True,
-                    outputFile=""):
+    def makeBubblePlots(
+        pvalues=pd.DataFrame(),
+        adjPValueThreshold=0.05,
+        wrap=25,
+        height=8,
+        width=10,
+        palette="colorblind",
+        saveAsPDF=True,
+        outputFile="",
+    ):
 
         """Uses a dataframe of pathway names and adjusted p-values (usually the output of scBONITA pathway analysis) to generate a bubbleplot showing the pathways and the -log10 of their adjusted p-values as calculated by scBONITA
 
@@ -1555,7 +1514,7 @@ class singleCell(ruleMaker):
         ----------
 
         pvalues: pandas DataFrame
-            Usually the output of scBONITA pathway analysis A dataframe containing at least the following columns: "Adjusted P value", "Pathway Name", "log10pvals". 
+            Usually the output of scBONITA pathway analysis A dataframe containing at least the following columns: "Adjusted P value", "Pathway Name", "log10pvals".
         adjPValueThreshold: float
             the adjusted p-value threshold below which dysregulated pathways are shown on the bubbleplot
         wrap: int
@@ -1565,7 +1524,7 @@ class singleCell(ruleMaker):
         width: float
             width of image in inches
         palette: str
-            The matplotlib color palette to be used for the analysis plots. Consider using 'colorblind'. See matplotlib 
+            The matplotlib color palette to be used for the analysis plots. Consider using 'colorblind'. See matplotlib
             documentation for more options on color palettes.
         saveAsPDF: bool
             whether to save the bubbleplot as a PDF
@@ -1576,26 +1535,126 @@ class singleCell(ruleMaker):
         -------
             None
         """
-
-        pvalues = pvalues.loc[pvalues.loc[:,
-                                        "Adjusted P value"].lt(adjPValueThreshold)]
-        pvalues = pvalues.sort_values('Adjusted P value', ascending=0)
-        pvalues['Pathway Name'] = pvalues['Pathway Name'].str.wrap(wrap)
-        ax = sns.scatterplot(data=pvalues,
-                            s=200,
-                            x="log10pvals",
-                            y="Pathway Name",
-                            alpha=1,
-                            palette=palette)
+        pvalues.loc[:, "log10pvals"] = [-1*np.log10(temp) for temp in pvalues.loc[:, "Adjusted P value"]]
+        pvalues = pvalues.loc[pvalues.loc[:, "Adjusted P value"].lt(adjPValueThreshold)]
+        pvalues = pvalues.sort_values("Adjusted P value", ascending=0)
+        pvalues["Pathway Name"] = pvalues["Pathway Name"].str.wrap(wrap)
+        ax = sns.scatterplot(
+            data=pvalues,
+            s=200,
+            x="log10pvals",
+            y="Pathway Name",
+            alpha=1,
+            palette=palette,
+        )
         plt.ylabel("Pathway Names")
         plt.xlabel("-log10 (adjusted p-value)")
         axes = plt.gca()
-        axes.yaxis.grid(color='grey', linestyle=(0, (5, 10)), linewidth=0.5)
+        axes.yaxis.grid(color="grey", linestyle=(0, (5, 10)), linewidth=0.5)
         if saveAsPDF:
-            plt.savefig(outputFile, bbox_inches='tight', height = height, width = width)
+            plt.savefig(outputFile, bbox_inches="tight", height=height, width=width)
             plt.show()
             plt.clf()
         else:
             plt.show()
             plt.clf()
         return None
+
+    def ProcessLocalSearchOutput(self, graph, graphName):
+        """
+        Processes the output of the local search component of scBONITA and returns a text file containing plain-text Boolean rules in the ERS, and other information such as in-degree and out-degree for each node in the network.
+        
+        Parameters:
+            graphName: name of the graphml file originally provided for rule inference
+        
+        Returns:
+            A Pandas DataFrame with the following columns:
+            'Node': name of the node in the network
+            'In_degree': in-degree in the processed network
+            'Out_degree': out-degree in the processed network
+            'Equivs_len'
+            'Graph': the provided graphName
+            'Number_of_Nodes': number of nodes in 'graph'
+            'importanceScore': the importance score of each node in 'graph' as calculated by scBONITA
+            'AvgLocalError': the average error of the local search in scBONITA-RD. 
+            'plainEquivs': the rules/equivalent rule set from the local search, in human-readable format
+            'bitstringEquivs': the rules/equivalent rule set from the local search, in bitstring format - this is the internal representation of rules in scBONITA and may be ignored by users
+            'minimalRules': the minimal rule set (minimizing the number of )
+        
+        """
+        
+        equivs=graphName+"_processed.graphml_equivs1.pickle"
+        print(Path(graphName), Path(equivs))
+        if Path(graphName).is_file(
+        ) and Path(equivs).is_file() and Path(
+                graphName + "_processed.graphml_importanceScores.csv").is_file():
+
+
+            errorsName = glob.glob(str(graphName) + "*_localErrors1.pickle")[0]
+            localErrors = pickle.load(open(errorsName, "rb"))
+
+            self._singleCell__inherit(graph,
+                            removeSelfEdges=False,
+                            restrictIncomingEdges=False)
+            equivs = pickle.load(
+                open(graphName + "_processed.graphml_equivs1.pickle", "rb"))
+
+            equivs = [tuple(equivs[i]) for i in range(0, len(equivs))]
+            #print(equivs)
+            equivs_len = [len(equivs[i]) for i in range(0, len(equivs))]
+
+            nodeList = list(self.nodeList)
+            minimalRules = self.processERS_minimalRule(
+                graphName + "_processed.graphml_equivs1.pickle")
+            plainEquivs = {}
+            bitstringEquivs = {}
+            minimalRulesNodes = {}
+            for node in range(0, len(nodeList)):
+                plainRules = []
+                ers = equivs[node]
+                for rule in ers:
+                    plainRules.append(
+                        self._ruleMaker__writeNode(
+                            self.nodeList.index(self.nodeList[node]),
+                            rule, self))
+                plainEquivs[nodeList[node]] = set(plainRules)
+                bitstringEquivs[nodeList[node]] = set(
+                    tuple(ers[i]) for i in range(0, len(ers)))
+                minimalRulesNodes[nodeList[node]] = self._ruleMaker__writeNode(
+                    node, minimalRules[self.individualParse[node]:self.
+                                    individualParse[node + 1]], self)
+            in_degree = [
+                graph.in_degree(node)
+                for node in nodeList
+            ]
+            out_degree = [
+                graph.out_degree(node)
+                for node in nodeList
+            ]
+            inOutRatio = [
+                float(inDeg + 1) / (outDeg + 1)
+                for inDeg, outDeg in zip(in_degree, out_degree)
+            ]
+            #Get importance score
+            importanceScoreDF = pd.read_csv(
+                graphName + "_processed.graphml_importanceScores.csv")
+            importanceScoreDict = {}
+            for n in list(importanceScoreDF['Node']):
+                temp = importanceScoreDF[importanceScoreDF.Node.isin({n})]
+                importanceScoreDict[n] = list(temp['Importance Score'])[0]
+
+            tempdf = pd.DataFrame(list(
+                zip(nodeList, in_degree, out_degree, inOutRatio, equivs_len)),
+                                columns=[
+                                    'Node', 'In_degree', 'Out_degree',
+                                    'Equivs_len'
+                                ])
+            tempdf["Graph"] = graphName
+            tempdf["Number_of_Nodes"] = str(len(nodeList))
+            tempdf["importanceScore"] = tempdf['Node'].map(importanceScoreDict)
+            tempdf["AvgLocalError"] = localErrors
+            tempdf["plainEquivs"] = tempdf['Node'].map(plainEquivs)
+            tempdf["bitstringEquivs"] = tempdf['Node'].map(bitstringEquivs)
+            tempdf["minimalRules"] = tempdf['Node'].map(minimalRulesNodes)
+            return(tempdf)
+

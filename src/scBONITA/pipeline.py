@@ -15,12 +15,12 @@ def runAllNetworks(dataFile, maxNodes=20000, maxSamples=50000):
         shellHandle = open(name + "_scoreNodes.sh", "w+")
         slurmCommands = str(
             "#!/bin/sh\n#SBATCH --partition=standard\n#SBATCH -J "
-            #"#!/bin/sh\n#SBATCH --partition=debug\n#SBATCH -J "
+            # "#!/bin/sh\n#SBATCH --partition=debug\n#SBATCH -J "
             + name
             + "\n#SBATCH -o "
             + name
-             + ".log\n#SBATCH -t 24:00:00\n#SBATCH -n 1\n#SBATCH -c 1\n#SBATCH --mem=10G\nmodule load anaconda3/2020.07\nsource activate scBonita\nmake\npython3.6 pipeline.py "
-            #+ ".log\n#SBATCH -t 1:00:00\n#SBATCH -n 1\n#SBATCH -c 1\n#SBATCH --mem=10G\nmodule load anaconda3/2020.07\nsource activate scBonita\nmake\npython3.6 pipeline.py "
+            + ".log\n#SBATCH -t 24:00:00\n#SBATCH -n 1\n#SBATCH -c 1\n#SBATCH --mem=10G\nmodule load anaconda3/2020.07\nsource activate scBonita\nmake\npython3.6 pipeline.py "
+            # + ".log\n#SBATCH -t 1:00:00\n#SBATCH -n 1\n#SBATCH -c 1\n#SBATCH --mem=10G\nmodule load anaconda3/2020.07\nsource activate scBonita\nmake\npython3.6 pipeline.py "
             + "--fullPipeline 0 --dataFile "
             + str(dataFile)
             + " --network "
@@ -143,7 +143,7 @@ if __name__ == "__main__":
         "--pathwayList",
         nargs="+",
         type=str,
-        help="Pathways to GRAPHML files that should be used for scBONITA analysis. Usually networks from non-KEGG sources, saved in GRAPHML format",
+        help="Paths to GRAPHML files that should be used for scBONITA analysis. Usually networks from non-KEGG sources, saved in GRAPHML format",
         required=False,
     )
     parser.add_argument(

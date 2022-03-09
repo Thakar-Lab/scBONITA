@@ -2,6 +2,7 @@
 from singleCell import *
 from ruleMaker import *
 
+"""
 # import packages
 import pickle, re, glob, os, copy, os.path, umap, random, requests, deap, gc
 import pandas as pd, seaborn as sns, matplotlib.pyplot as plt, matplotlib.cm as cm, matplotlib.pyplot as plt, scipy.spatial.distance as ssd, networkx as nx, numpy as np, multiprocessing as mp
@@ -60,3 +61,4 @@ scObject.makeAttractorAnalysisPlots(
     makeUMAP=True,
     umapFile="umapPlots_test.pdf",
 )
+"""
