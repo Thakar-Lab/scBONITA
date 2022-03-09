@@ -1,0 +1,2 @@
+Pathway ID,Pathway Name,P value,Contrast,Upregulated_in_Control,Adjusted P value
+data/hsa00010,data/hsa00010,0.1581466362942054,Control_vs_Treatment,False,0.1581466362942054
