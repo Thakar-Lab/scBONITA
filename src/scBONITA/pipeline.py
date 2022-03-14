@@ -208,6 +208,14 @@ if __name__ == "__main__":
         required=False
     )
     parser.add_argument(
+        "--generateSbatch",
+        help="Should scBONITA generate and execute SLURM sbatch scripts to run multiple rule inference jobs?",
+        default=False,
+        type=int,
+        choices=[0,1]
+        required=False
+    )
+    parser.add_argument(
         "--binarizeThreshold",
         help="Threshold for binarization of the training dataset. Values above this are classed as 1 (or 'on') and values below this are classed as 0 (or 'off').",
         default=None,
@@ -274,6 +282,7 @@ if __name__ == "__main__":
     module = results.module
     condaEnv = results.condaEnv
     pythonVersion = results.pythonVersion
+    generateSbatch = results.generateSbatch
     if fullPipeline == 1:
         if dataFile == "":
             dataFile = glob.glob("*.bin")[0]
@@ -294,6 +303,7 @@ if __name__ == "__main__":
             module=module,
             condaEnv=condaEnv,
             pythonVersion=pythonVersion,
+            generateSbatch=generateSbatch
         )
     else:
         if fullPipeline == 0:
