@@ -26,7 +26,7 @@ class singleCell(ruleMaker):
     ):
         """Read in pre-processed data and binarize by threshold"""
         data = np.loadtxt(dataName, delimiter=sep, dtype="str")
-        # SAMPLE CELLS HERE
+
         if maxSamples > 15000 or sampleCells=True:
             sampledCellIndices = self.__sampleCells(data=data, number_cells = max(15000, maxSamples))
             self.geneList = data[1:, 0]
@@ -52,9 +52,9 @@ class singleCell(ruleMaker):
         # super().__init__(self)
         # print(self.binMat.toarray())
         # populate binMat to a predefined size
-        self.binMat.resize((min(self.maxNodes, 20000), len(self.sampleList)))
+        self.binMat.resize((min(len(self.geneList), 20000), len(self.sampleList)))
         self.pathwayGraphs = {}
-
+    
     def __sampleCells(self, data, number_cells):
         """Sample a representative population of cells for rule inference - reduce memory requirements"""
         combined = np.apply_along_axis(lambda x: ''.join(str(x)), axis=1, arr=data)

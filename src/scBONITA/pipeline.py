@@ -161,7 +161,7 @@ if __name__ == "__main__":
         "--maxNodes", help="Number of genes in the dataset", default=20000, type=int
     )
     parser.add_argument(
-        "--maxSamples", help="Number of cells in the dataset", default=50000, type=int
+        "--maxSamples", help="Number of cells in the dataset", default=15000, type=int
     )
     parser.add_argument(
         "--separator",
@@ -198,48 +198,65 @@ if __name__ == "__main__":
         default="hsa",
         type=str,
         choices=k.organismIds,
+        required=False
     )
     parser.add_argument(
         "--cvThreshold",
         help="Minimum coefficient of variation to retain genes for scBONITA analysis",
         default=None,
         type=float,
+        required=False
     )
     parser.add_argument(
         "--binarizeThreshold",
         help="Threshold for binarization of the training dataset. Values above this are classed as 1 (or 'on') and values below this are classed as 0 (or 'off').",
         default=None,
         type=float,
+        required=False
     )
     parser.add_argument(
         "--partition",
         help="SLURM parameter for generated sbatch scripts, if generateSbatch is True",
         default="standard",
         type="str",
+        required=False
     )
     parser.add_argument(
         "--memory",
         help="SLURM parameter for generated sbatch scripts, if generateSbatch is True",
         default="10G",
         type="str",
+        required=False
     )
     parser.add_argument(
         "--module",
         help="Python/Anaconda module to be loaded in the generated sbatch scripts, if generateSbatch is True",
         default="anaconda3/2020.07",
         type="str",
+        required=False
     )
     parser.add_argument(
         "--condaEnv",
         help="conda environment to be activated in the generated sbatch scripts, if generateSbatch is True",
         default="scBonita",
         type="str",
+        required=False
     )
     parser.add_argument(
         "--pythonVersion",
         help="Python version to be used in the generated sbatch scripts, if generateSbatch is True",
         default="python3.6",
         type="str",
+        required=False
+    )
+    parser.add_argument(
+        "--sampleCells",
+        type=int,
+        choices=[0, 1],
+        help="If True, scBonita will use a representative set of samples to infer rules. This is automatically done if the maxSamples parameter exceeds 15000, in order to reduce memory usage.",
+        default="python3.6",
+        type="str",
+        required=False
     )
     results = parser.parse_args()
     fullPipeline = results.fullPipeline
