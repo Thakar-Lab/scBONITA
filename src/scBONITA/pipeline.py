@@ -9,33 +9,42 @@ import argparse
 import subprocess
 
 
-def runAllNetworks(dataFile, maxNodes=20000, maxSamples=50000):
+def runAllNetworks(dataFile, maxNodes=20000, maxSamples=50000, partitition='standard', memory = '10G', module = 'anaconda3/2020/07', condaEnv = 'scBonita', pythonVersion = "python3.6", generateSbatch=True):
     for net in glob.glob("*_processed.graphml"):
-        name = net  # [:-8]
-        shellHandle = open(name + "_scoreNodes.sh", "w+")
-        slurmCommands = str(
-            "#!/bin/sh\n#SBATCH --partition=standard\n#SBATCH -J "
-            # "#!/bin/sh\n#SBATCH --partition=debug\n#SBATCH -J "
-            + name
-            + "\n#SBATCH -o "
-            + name
-            + ".log\n#SBATCH -t 24:00:00\n#SBATCH -n 1\n#SBATCH -c 1\n#SBATCH --mem=10G\nmodule load anaconda3/2020.07\nsource activate scBonita\nmake\npython3.6 pipeline.py "
-            # + ".log\n#SBATCH -t 1:00:00\n#SBATCH -n 1\n#SBATCH -c 1\n#SBATCH --mem=10G\nmodule load anaconda3/2020.07\nsource activate scBonita\nmake\npython3.6 pipeline.py "
-            + "--fullPipeline 0 --dataFile "
-            + str(dataFile)
-            + " --network "
-            + str(net)
-            + " --maxNodes "
-            + str(maxNodes)
-            + " --maxSamples "
-            + str(maxSamples)
-        )
-        shellHandle.write(slurmCommands)
-        shellHandle.close()
-        shellCommand = name + "_scoreNodes.sh"
-        print([shellCommand])
-        p = subprocess.Popen(["sbatch", shellCommand])
-
+        if generateSbatch:
+            name = net  # [:-8]
+            shellHandle = open(name + "_scoreNodes.sh", "w+")
+            slurmCommands = str(
+                "#!/bin/sh\n#SBATCH --partition=standard\n#SBATCH -J "
+                + name
+                + "\n#SBATCH -o "
+                + name
+                + ".log\n#SBATCH -t 24:00:00\n#SBATCH -n 1\n#SBATCH -c 1\n#SBATCH --mem=10G\nmodule load " + str(module) + '\nsource activate ' + str(condaEnv) + '\nmake\n' + str(pythonVersion) + " pipeline.py "
+                + "--fullPipeline 0 --dataFile "
+                + str(dataFile)
+                + " --network "
+                + str(net)
+                + " --maxNodes "
+                + str(maxNodes)
+                + " --maxSamples "
+                + str(maxSamples)
+            )
+            shellHandle.write(slurmCommands)
+            shellHandle.close()
+            shellCommand = name + "_scoreNodes.sh"
+            print("Executed ", [shellCommand])
+            p = subprocess.Popen(["sbatch", shellCommand])
+        else:
+            print("For " + net + " run the command: " + str(pythonVerstion) +  " pipeline.py "
+                + "--fullPipeline 0 --dataFile "
+                + str(dataFile)
+                + " --network "
+                + str(net)
+                + " --maxNodes "
+                + str(maxNodes)
+                + " --maxSamples "
+                + str(maxSamples)
+            )
 
 def pipeline(
     dataName="",
@@ -49,6 +58,12 @@ def pipeline(
     organism="hsa",
     cvThreshold=None,
     binarizeThreshold=0.001,
+    generateSbatch=True,
+    partitition='standard', 
+    memory = '10G',
+    module = 'anaconda3/2020/07',
+    condaEnv = 'scBonita',
+    pythonVersion = 'python3.6'
 ):
     scTest = singleCell(
         dataName=dataName, sep=sep, maxNodes=maxNodes, maxSamples=maxSamples
@@ -88,8 +103,7 @@ def pipeline(
     scTest.nodeList = scTest.geneList
     scTest.nodePositions = [scTest.geneList.index(node) for node in scTest.nodeList]
     pickle.dump(scTest, open(dataName + "scTest.pickle", "wb"))
-    scTest = pickle.load(open(dataName + "scTest.pickle", "rb"))
-    runAllNetworks(dataFile=dataName, maxNodes=maxNodes, maxSamples=maxSamples)
+    runAllNetworks(dataFile=dataName, maxNodes=maxNodes, maxSamples=maxSamples, partition=partition, memory=memory, condaEnv=condaEnv, module=module, pythonVersion=pythonVersion, generateSbatch = generateSbatch)
 
 
 if __name__ == "__main__":
@@ -165,6 +179,36 @@ if __name__ == "__main__":
         default=None,
         type=float,
     )
+    parser.add_argument(
+        "--partition",
+        help="SLURM parameter for generated sbatch scripts, if generateSbatch is True",
+        default='standard',
+        type='str',
+    )
+    parser.add_argument(
+        "--memory",
+        help="SLURM parameter for generated sbatch scripts, if generateSbatch is True",
+        default='10G',
+        type='str',
+    )   
+    parser.add_argument(
+        "--module",
+        help="Python/Anaconda module to be loaded in the generated sbatch scripts, if generateSbatch is True",
+        default='anaconda3/2020.07',
+        type='str',
+    )
+    parser.add_argument(
+        "--condaEnv",
+        help="conda environment to be activated in the generated sbatch scripts, if generateSbatch is True",
+        default='scBonita',
+        type='str',
+    )
+    parser.add_argument(
+        "--pythonVersion",
+        help="Python version to be used in the generated sbatch scripts, if generateSbatch is True",
+        default='python3.6',
+        type='str',
+    )  
     results = parser.parse_args()
     fullPipeline = results.fullPipeline
     net = results.network
@@ -177,6 +221,10 @@ if __name__ == "__main__":
     pathwayList = results.pathwayList
     organism = results.organism
     cvThreshold = results.cvThreshold
+    memory = results.memory
+    module = results.module
+    condaEnv = results.condaEnv
+    pythonVersion = results.pythonVersion
     if fullPipeline == 1:
         if dataFile == "":
             dataFile = glob.glob("*.bin")[0]
@@ -192,7 +240,7 @@ if __name__ == "__main__":
             listOfKEGGPathways=listOfKEGGPathways,
             pathwayList=pathwayList,
             organism=organism,
-            cvThreshold=cvThreshold,
+            cvThreshold=cvThreshold, partitition=partition, memory = memory, module = module, condaEnv = condaEnv, pythonVersion = pythonVersion
         )
     else:
         if fullPipeline == 0:
