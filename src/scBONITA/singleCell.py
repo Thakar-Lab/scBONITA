@@ -22,15 +22,22 @@ class singleCell(ruleMaker):
     """Class for single-cell experiments"""
 
     def __init__(
-        self, dataName, sep, maxNodes=15000, maxSamples=10000, binarizeThreshold=0.001
+        self, dataName, sep, maxNodes=15000, maxSamples=10000, binarizeThreshold=0.001, sampleCells=True
     ):
         """Read in pre-processed data and binarize by threshold"""
         data = np.loadtxt(dataName, delimiter=sep, dtype="str")
-        self.geneList, self.sampleList, self.expMat = (
-            data[1:, 0],
-            data[0, 1:],
-            sparse.csr_matrix(data[1:, 1:].astype("float")),
-        )
+        # SAMPLE CELLS HERE
+        if maxSamples > 15000 or sampleCells=True:
+            sampledCellIndices = self.__sampleCells(data=data, number_cells = max(15000, maxSamples))
+            self.geneList = data[1:, 0]
+            self.sampleList = data[0, sampledCellIndices]
+            self.expMat = sparse_csr_matrix(data[1:, sampledCellIndices])
+        else:
+            self.geneList, self.sampleList, self.expMat = (
+                data[1:, 0],
+                data[0, 1:],
+                sparse.csr_matrix(data[1:, 1:].astype("float")),
+            )
         self.geneList = list(self.geneList)
         self.sampleList = list(self.sampleList)
         print("Genelist: " + str(self.geneList))
@@ -45,8 +52,15 @@ class singleCell(ruleMaker):
         # super().__init__(self)
         # print(self.binMat.toarray())
         # populate binMat to a predefined size
-        self.binMat.resize((self.maxNodes, self.maxSamples))
+        self.binMat.resize((min(self.maxNodes, 20000), len(self.sampleList)))
         self.pathwayGraphs = {}
+
+    def __sampleCells(self, data, number_cells):
+        """Sample a representative population of cells for rule inference - reduce memory requirements"""
+        combined = np.apply_along_axis(lambda x: ''.join(str(x)), axis=1, arr=data)
+        combined_weights = np.unique(combined, return_counts=True)[1]/len(combined)
+        sampled_cells = np.random.choice(range(1, len(data[0, 1:])), size = numberCells, p = combined_weights)
+        return(sampled_cells)
 
     def __addSubpop(self, subpopFile, sep):
         """Add subpopulation information to object"""
@@ -1632,10 +1646,10 @@ class singleCell(ruleMaker):
                 )
             in_degree = [graph.in_degree(node) for node in nodeList]
             out_degree = [graph.out_degree(node) for node in nodeList]
-            inOutRatio = [
-                float(inDeg + 1) / (outDeg + 1)
-                for inDeg, outDeg in zip(in_degree, out_degree)
-            ]
+            # inOutRatio = [
+            #    float(inDeg + 1) / (outDeg + 1)
+            #    for inDeg, outDeg in zip(in_degree, out_degree)
+            # ]
             # Get importance score
             importanceScoreDF = pd.read_csv(
                 graphName + "_processed.graphml_importanceScores.csv"
@@ -1644,9 +1658,8 @@ class singleCell(ruleMaker):
             for n in list(importanceScoreDF["Node"]):
                 temp = importanceScoreDF[importanceScoreDF.Node.isin({n})]
                 importanceScoreDict[n] = list(temp["Importance Score"])[0]
-
             tempdf = pd.DataFrame(
-                list(zip(nodeList, in_degree, out_degree, inOutRatio, equivs_len)),
+                list(zip(nodeList, in_degree, out_degree, equivs_len)),
                 columns=["Node", "In_degree", "Out_degree", "Equivs_len"],
             )
             tempdf["Graph"] = graphName
