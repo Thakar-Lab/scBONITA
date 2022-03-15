@@ -212,7 +212,7 @@ if __name__ == "__main__":
         help="Should scBONITA generate and execute SLURM sbatch scripts to run multiple rule inference jobs?",
         default=False,
         type=int,
-        choices=[0,1]
+        choices=[0,1], 
         required=False
     )
     parser.add_argument(
@@ -263,7 +263,6 @@ if __name__ == "__main__":
         choices=[0, 1],
         help="If True, scBonita will use a representative set of samples to infer rules. This is automatically done if the maxSamples parameter exceeds 15000, in order to reduce memory usage.",
         default="python3.6",
-        type="str",
         required=False
     )
     results = parser.parse_args()

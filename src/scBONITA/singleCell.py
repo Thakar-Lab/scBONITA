@@ -27,7 +27,7 @@ class singleCell(ruleMaker):
         """Read in pre-processed data and binarize by threshold"""
         data = np.loadtxt(dataName, delimiter=sep, dtype="str")
 
-        if maxSamples > 15000 or sampleCells=True:
+        if maxSamples > 15000 or sampleCells:
             sampledCellIndices = self.__sampleCells(data=data, number_cells = max(15000, maxSamples))
             self.geneList = data[1:, 0]
             self.sampleList = data[0, sampledCellIndices]
