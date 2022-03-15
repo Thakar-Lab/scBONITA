@@ -32,6 +32,8 @@ class singleCell(ruleMaker):
             self.geneList = data[1:, 0]
             self.sampleList = data[0, sampledCellIndices]
             self.expMat = sparse.csr_matrix(data[1:, sampledCellIndices].astype("float"))
+            print("Length: ", len(sampledCellIndices))
+            print("Shape: ", data[1:, sampledCellIndices].shape)
         else:
             self.geneList, self.sampleList, self.expMat = (
                 data[1:, 0],
@@ -57,7 +59,7 @@ class singleCell(ruleMaker):
     
     def __sampleCells(self, data, number_cells):
         """Sample a representative population of cells for rule inference - reduce memory requirements"""
-        combined = np.apply_along_axis(lambda x: ''.join(str(x)), axis=0, arr=data[1:, 1:])
+        combined = np.apply_along_axis(lambda x: ''.join(str(x)), axis=0, arr=data) #[1:, 1:]
         combined_weights = np.unique(combined, return_counts=True)[1]/len(combined)
         sampled_cells = np.random.choice(range(len(combined_weights)), replace=True, size = number_cells, p = combined_weights)
         return(sampled_cells)
