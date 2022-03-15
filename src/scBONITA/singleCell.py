@@ -57,9 +57,9 @@ class singleCell(ruleMaker):
     
     def __sampleCells(self, data, number_cells):
         """Sample a representative population of cells for rule inference - reduce memory requirements"""
-        combined = np.apply_along_axis(lambda x: ''.join(str(x)), axis=1, arr=data[1:, 1:])
+        combined = np.apply_along_axis(lambda x: ''.join(str(x)), axis=0, arr=data[1:, 1:])
         combined_weights = np.unique(combined, return_counts=True)[1]/len(combined)
-        sampled_cells = np.random.choice(list(range(1, len(data[1, 1:]))), size = number_cells, p = combined_weights)
+        sampled_cells = np.random.choice(list(range(0, len(data[0, 1:]))), size = number_cells, p = combined_weights)
         return(sampled_cells)
 
     def __addSubpop(self, subpopFile, sep):
