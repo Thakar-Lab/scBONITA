@@ -28,7 +28,7 @@ class singleCell(ruleMaker):
         data = np.loadtxt(dataName, delimiter=sep, dtype="str")
 
         if maxSamples >= 15000 or sampleCells:
-            sampledCellIndices = self.__sampleCells(data=data[1:, 1:], number_cells = 15000)
+            sampledCellIndices = self.__sampleCells(data=data[1:, 1:], number_cells = 1500)
             self.geneList = data[1:, 0]
             self.sampleList = data[0, sampledCellIndices]
             self.expMat = sparse.csr_matrix(data[1:, sampledCellIndices].astype("float"))
@@ -40,10 +40,11 @@ class singleCell(ruleMaker):
                 data[0, 1:],
                 sparse.csr_matrix(data[1:, 1:].astype("float")),
             )
+        del data
         self.geneList = list(self.geneList)
         self.sampleList = list(self.sampleList)
         print("Genelist: " + str(self.geneList))
-        del data
+        
         self.expMat.eliminate_zeros()
         self.binMat = preprocessing.binarize(
             self.expMat, threshold=binarizeThreshold, copy=False
