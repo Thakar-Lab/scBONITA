@@ -226,35 +226,35 @@ if __name__ == "__main__":
         "--partition",
         help="SLURM parameter for generated sbatch scripts, if generateSbatch is True",
         default="standard",
-        type="str",
+        type=str,
         required=False
     )
     parser.add_argument(
         "--memory",
         help="SLURM parameter for generated sbatch scripts, if generateSbatch is True",
         default="10G",
-        type="str",
+        type=str,
         required=False
     )
     parser.add_argument(
         "--module",
         help="Python/Anaconda module to be loaded in the generated sbatch scripts, if generateSbatch is True",
         default="anaconda3/2020.07",
-        type="str",
+        type=str,
         required=False
     )
     parser.add_argument(
         "--condaEnv",
         help="conda environment to be activated in the generated sbatch scripts, if generateSbatch is True",
         default="scBonita",
-        type="str",
+        type=str,
         required=False
     )
     parser.add_argument(
         "--pythonVersion",
         help="Python version to be used in the generated sbatch scripts, if generateSbatch is True",
         default="python3.6",
-        type="str",
+        type=str,
         required=False
     )
     parser.add_argument(
@@ -262,7 +262,7 @@ if __name__ == "__main__":
         type=int,
         choices=[0, 1],
         help="If True, scBonita will use a representative set of samples to infer rules. This is automatically done if the maxSamples parameter exceeds 15000, in order to reduce memory usage.",
-        default="python3.6",
+        default=0,
         required=False
     )
     results = parser.parse_args()
@@ -282,6 +282,7 @@ if __name__ == "__main__":
     condaEnv = results.condaEnv
     pythonVersion = results.pythonVersion
     generateSbatch = results.generateSbatch
+    partition=results.partition
     if fullPipeline == 1:
         if dataFile == "":
             dataFile = glob.glob("*.bin")[0]

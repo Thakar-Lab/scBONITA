@@ -19,7 +19,7 @@ source activate scBonita
 
 #Initiate run
 
-python3.6 
+python3.6 pipeline.py --dataFile "Mild_Severe_Covid_dataset_finalized.csv" --fullPipeline 1 --maxNodes 20000 --maxSamples 15000 --separator "," --listOfKEGGPathways "04066" --getKEGGPathways 1 --organism "hsa"
 
 #Check the progress of jobs using:
 #squeue -u yourNETID
