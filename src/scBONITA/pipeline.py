@@ -13,7 +13,7 @@ def runAllNetworks(
     dataFile,
     maxNodes=20000,
     maxSamples=50000,
-    partitition="standard",
+    partition="standard",
     memory="10G",
     module="anaconda3/2020/07",
     condaEnv="scBonita",
@@ -55,7 +55,7 @@ def runAllNetworks(
                 "For "
                 + net
                 + " run the command: "
-                + str(pythonVerstion)
+                + str(pythonVersion)
                 + " pipeline.py "
                 + "--fullPipeline 0 --dataFile "
                 + str(dataFile)
@@ -211,8 +211,8 @@ if __name__ == "__main__":
         "--generateSbatch",
         help="Should scBONITA generate and execute SLURM sbatch scripts to run multiple rule inference jobs?",
         default=False,
-        type=int,
-        choices=[0,1], 
+        type=bool,
+        choices=[True,False], 
         required=False
     )
     parser.add_argument(
