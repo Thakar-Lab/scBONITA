@@ -36,7 +36,7 @@ class singleCell(ruleMaker):
             print("Shape: ", data[1:, sampledCellIndices].shape)
         else:
             self.geneList, self.sampleList, self.expMat = (
-                data[1:, 0],
+                data[1:, 0], 
                 data[0, 1:],
                 sparse.csr_matrix(data[1:, 1:].astype("float")),
             )
