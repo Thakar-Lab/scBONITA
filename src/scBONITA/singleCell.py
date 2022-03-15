@@ -27,11 +27,13 @@ class singleCell(ruleMaker):
         """Read in pre-processed data and binarize by threshold"""
         data = np.loadtxt(dataName, delimiter=sep, dtype="str")
 
-        if maxSamples > 15000 or sampleCells:
-            sampledCellIndices = self.__sampleCells(data=data, number_cells = max(15000, maxSamples))
+        if maxSamples >= 15000 or sampleCells:
+            sampledCellIndices = self.__sampleCells(data=data[1:, 1:], number_cells = 15000)
             self.geneList = data[1:, 0]
             self.sampleList = data[0, sampledCellIndices]
-            self.expMat = sparse.csr_matrix(data[1:, sampledCellIndices])
+            self.expMat = sparse.csr_matrix(data[1:, sampledCellIndices].astype("float"))
+            print("Length: ", len(sampledCellIndices))
+            print("Shape: ", data[1:, sampledCellIndices].shape)
         else:
             self.geneList, self.sampleList, self.expMat = (
                 data[1:, 0],
@@ -57,9 +59,9 @@ class singleCell(ruleMaker):
     
     def __sampleCells(self, data, number_cells):
         """Sample a representative population of cells for rule inference - reduce memory requirements"""
-        combined = np.apply_along_axis(lambda x: ''.join(str(x)), axis=0, arr=data[1:, 1:])
+        combined = np.apply_along_axis(lambda x: ''.join(str(x)), axis=0, arr=data) #[1:, 1:]
         combined_weights = np.unique(combined, return_counts=True)[1]/len(combined)
-        sampled_cells = np.random.choice(list(range(0, len(data[0, 1:]))), size = number_cells, p = combined_weights)
+        sampled_cells = np.random.choice(range(len(combined_weights)), replace=True, size = number_cells, p = combined_weights)
         return(sampled_cells)
 
     def __addSubpop(self, subpopFile, sep):
