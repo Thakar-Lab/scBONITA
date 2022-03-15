@@ -31,7 +31,7 @@ class singleCell(ruleMaker):
             sampledCellIndices = self.__sampleCells(data=data, number_cells = max(15000, maxSamples))
             self.geneList = data[1:, 0]
             self.sampleList = data[0, sampledCellIndices]
-            self.expMat = sparse_csr_matrix(data[1:, sampledCellIndices])
+            self.expMat = sparse.csr_matrix(data[1:, sampledCellIndices])
         else:
             self.geneList, self.sampleList, self.expMat = (
                 data[1:, 0],
