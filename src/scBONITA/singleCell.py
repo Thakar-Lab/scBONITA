@@ -795,6 +795,7 @@ class singleCell(ruleMaker):
         )
 
     def __getPathwayName(self, hsaURL):
+        """Use KEGG API to get the readable name using the KEGG code (eg. hsa00010 corresponds to the glycolysis pathway)"""
         fileReg = re.compile("NAME\s+(\w+.*)")
         pathwayFile = requests.get("http://rest.kegg.jp/get/" + hsaURL, stream=True)
         for line in pathwayFile.iter_lines():
