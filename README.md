@@ -10,7 +10,7 @@ __Mukta G. Palshikar, Rohith Palli, Alicia Tyrell, Sanjay Maggirwar, Giovanni Sc
 
 medRxiv 2022.03.07.22271522; doi: https://doi.org/10.1101/2022.03.07.22271522
 
-__This article is a preprint and has not been certified by peer review. It reports new medical research that has yet to be evaluated and so should not be used to guide clinical practice.__
+_This article is a preprint and has not been certified by peer review. It reports new medical research that has yet to be evaluated and so should not be used to guide clinical practice._
 
 ## Description
 
