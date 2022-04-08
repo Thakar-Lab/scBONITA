@@ -30,7 +30,7 @@ class singleCell(ruleMaker):
         self.sampleList = self.sampleList[1:len(self.sampleList)]
         if maxSamples >= 15000 or sampleCells:
             maxSamples=15000
-            data = np.loadtxt(dataName, delimiter=sep, dtype="str")
+            data = np.loadtxt(dataName, delimiter=sep, dtype="str", usecols=np.insert(np.random.choice(range(len(self.sampleList)), replace=False, size=maxSamples), 0, 0., axis=0) )
             sampledCellIndices = self.__sampleCells(data=data[1:, 1:], number_cells = maxSamples) #jiayue - modify number_cells
             self.geneList = data[1:, 0]
             self.sampleList = data[0, sampledCellIndices]
@@ -38,7 +38,7 @@ class singleCell(ruleMaker):
             print("Length: ", len(sampledCellIndices))
             print("Shape: ", data[1:, sampledCellIndices].shape)
         else:
-            data = np.loadtxt(dataName, delimiter=sep, dtype="str")
+            data = np.loadtxt(dataName, delimiter=sep, dtype="str", usecols=np.insert(np.random.choice(range(len(self.sampleList)), replace=False, size=maxSamples), 0, 0., axis=0) )
             self.geneList, self.sampleList, self.expMat = (
                 data[1:, 0], 
                 data[0, 1:],
@@ -62,9 +62,9 @@ class singleCell(ruleMaker):
     
     def __sampleCells(self, data, number_cells):
         """Sample a representative population of cells for rule inference - reduce memory requirements"""
-        combined = np.apply_along_axis(lambda x: ''.join(str(x)), axis=0, arr=data)#[1:, 1:])
+        combined = np.apply_along_axis(lambda x: ''.join(str(x)), axis=1, arr=data[1:, 1:])
         combined_weights = np.unique(combined, return_counts=True)[1]/len(combined)
-        sampled_cells = np.random.choice(range(len(combined_weights)), replace=False, size = number_cells, p = combined_weights)
+        sampled_cells = np.random.choice(range(len(combined_weights)), size = number_cells, p = combined_weights)
         print(len(sampled_cells))
         sampled_cells = np.delete(sampled_cells, np.where(sampled_cells == 0))
         print(len(sampled_cells))
