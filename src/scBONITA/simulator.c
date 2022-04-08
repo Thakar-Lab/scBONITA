@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #define STEP 100 //simsteps ROW
-#define NODE 20000 //15000 //nodes COL
-#define CELL 1000 //60000
+#define NODE 50000 //15000 //nodes COL
+#define CELL 10000 //60000 、、jiayue
 
 int updateBool(int currentNode, int *oldValue,int *nodeIndividual, int andNodes[7][3], int andNodeInvertList[7][3], int nodeStart, int nodeEnd)
 {
