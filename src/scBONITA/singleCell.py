@@ -29,7 +29,7 @@ class singleCell(ruleMaker):
         self.sampleList = self.sampleList.split(sep)
         self.sampleList = self.sampleList[1:len(self.sampleList)]
         if maxSamples >= 15000 or sampleCells:
-            maxSamples=15000
+            maxSamples=min(15000, len(self.sampleList))
             data = np.loadtxt(dataName, delimiter=sep, dtype="str", usecols=np.insert(np.random.choice(range(len(self.sampleList)), replace=False, size=maxSamples), 0, 0., axis=0) )
             sampledCellIndices = self.__sampleCells(data=data[1:, 1:], number_cells = maxSamples) #jiayue - modify number_cells
             self.geneList = data[1:, 0]
@@ -38,6 +38,7 @@ class singleCell(ruleMaker):
             print("Length: ", len(sampledCellIndices))
             print("Shape: ", data[1:, sampledCellIndices].shape)
         else:
+            maxSamples = 15000
             data = np.loadtxt(dataName, delimiter=sep, dtype="str", usecols=np.insert(np.random.choice(range(len(self.sampleList)), replace=False, size=maxSamples), 0, 0., axis=0) )
             self.geneList, self.sampleList, self.expMat = (
                 data[1:, 0], 
