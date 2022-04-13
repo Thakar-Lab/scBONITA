@@ -154,9 +154,9 @@ if __name__ == "__main__":
         choices=[0, 1],
         help="Should scBonita set up the entire pipeline, starting with generation of network topologies?Accepts values 0 or 1.",
     )
-    parser.add_argument(
-        "--network", help="File name of the network for which rules are to be inferred"
-    )
+    #parser.add_argument(
+    #    "--network", help="File name of the network for which rules are to be inferred"
+    #)
     parser.add_argument(
         "--maxNodes", help="Number of genes in the dataset", default=20000, type=int
     )
