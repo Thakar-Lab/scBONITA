@@ -101,7 +101,11 @@ def pipeline(
         scTest._singleCell__add_pathways(pathwayGraphs, minOverlap=1)
         print(scTest.pathwayGraphs)
     else:
-        scTest._singleCell__add_pathways([pathwayList], minOverlap=1)
+        if isinstance(pathwayList, str):
+            scTest._singleCell__add_pathways([pathwayList], minOverlap=1)
+        else:
+            if isinstance(pathwayList, list):
+                scTest._singleCell__add_pathways(pathwayList, minOverlap=1)
     # cut down data size
     nodeIndices = []
     for graph in scTest.pathwayGraphs.keys():
@@ -298,7 +302,7 @@ if __name__ == "__main__":
             pathwayList=pathwayList,
             organism=organism,
             cvThreshold=cvThreshold,
-            partitition=partition,
+            partition=partition,
             memory=memory,
             module=module,
             condaEnv=condaEnv,
