@@ -29,7 +29,7 @@ def runAllNetworks(
                 + name
                 + "\n#SBATCH -o "
                 + name
-                + ".log\n#SBATCH -t 24:00:00\n#SBATCH -n 1\n#SBATCH -c 1\n#SBATCH --mem=10G\nmodule load "
+                + ".log\n#SBATCH -t 24:00:00\n#SBATCH -n 1\n#SBATCH -c 1\n#SBATCH --mem="+memory+"\nmodule load "
                 + str(module)
                 + "\nsource activate "
                 + str(condaEnv)
