@@ -39,7 +39,7 @@ class singleCell(ruleMaker):
             print("Length: ", len(sampledCellIndices))
             print("Shape: ", data[1:, sampledCellIndices].shape)
         else:
-            data = np.loadtxt(dataName, delimiter=sep, dtype="str", usecols=np.insert(np.random.choice(range(1, len(self.sampleList)), replace=False, size=maxSamples), 0, 0., axis=0))
+            data = np.loadtxt(dataName, delimiter=sep, dtype="str", usecols=np.insert(np.random.choice(range(1, len(self.sampleList)+1), replace=False, size=maxSamples), 0, 0., axis=0))
             self.geneList, self.sampleList, self.expMat = (
                 data[1:, 0], 
                 data[0, 1:],
