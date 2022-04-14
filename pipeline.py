@@ -81,7 +81,7 @@ def pipeline(
     cvThreshold=None,
     binarizeThreshold=0.001,
     generateSbatch=True,
-    partitition="standard",
+    partition="standard",
     memory="10G",
     module="anaconda3/2020/07",
     condaEnv="scBonita",
@@ -101,7 +101,11 @@ def pipeline(
         scTest._singleCell__add_pathways(pathwayGraphs, minOverlap=1)
         print(scTest.pathwayGraphs)
     else:
-        scTest._singleCell__add_pathways(pathwayList, minOverlap=1)
+        if isinstance(pathwayList, str):
+            scTest._singleCell__add_pathways([pathwayList], minOverlap=1)
+        else:
+            if isinstance(pathwayList, list):
+                scTest._singleCell__add_pathways(pathwayList, minOverlap=1)
     # cut down data size
     nodeIndices = []
     for graph in scTest.pathwayGraphs.keys():
@@ -154,9 +158,9 @@ if __name__ == "__main__":
         choices=[0, 1],
         help="Should scBonita set up the entire pipeline, starting with generation of network topologies?Accepts values 0 or 1.",
     )
-    #parser.add_argument(
-    #    "--network", help="File name of the network for which rules are to be inferred"
-    #)
+    parser.add_argument(
+        "--network", help="File name of the processed network for which rules are to be inferred"
+    )
     parser.add_argument(
         "--maxNodes", help="Number of genes in the dataset", default=20000, type=int
     )
@@ -298,7 +302,7 @@ if __name__ == "__main__":
             pathwayList=pathwayList,
             organism=organism,
             cvThreshold=cvThreshold,
-            partitition=partition,
+            partition=partition,
             memory=memory,
             module=module,
             condaEnv=condaEnv,
