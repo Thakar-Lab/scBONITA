@@ -353,8 +353,10 @@ class ruleMaker:
                 tempandNodeInvertList.append([0, 0, 0])
             tempandnoder.append(tempAndNodes)
             tempandinverter.append(tempandNodeInvertList)
-        self.andNodeInvert = np.array(tempandinverter, dtype=np.intc, order="C")
-        self.andNodes = np.array(tempandnoder, dtype=np.intc, order="C")
+        #self.andNodeInvert = np.array(tempandinverter, dtype=np.intc, order="C")
+        self.andNodeInvert = np.array(tempandinverter, dtype=object, order="C")
+        #self.andNodes = np.array(tempandnoder, dtype=np.intc, order="C")
+        self.andNodes = np.array(tempandnoder, dtype=object, order="C")
 
     def __genRandBits(self):
         """generates a random bitstring"""
@@ -1096,7 +1098,7 @@ class ruleMaker:
         indLen = len(nodeIndividual)
         andNodes = np.array(model.andNodes, dtype=np.intc, order="C")
         nodeNum = len(model.nodeList)
-        andNodeInvert = np.array(model.andNodeInvert, dtype=np.intc, order="C")
+        andNodeInvert = np.array(model.andNodeInvert, dtype=object, order="C")
         individualParse = np.array(model.individualParse, dtype=np.intc, order="C")
         andLenList = np.array(model.andLenList, dtype=np.intc, order="C")
         nodePositions1 = model.nodePositions
