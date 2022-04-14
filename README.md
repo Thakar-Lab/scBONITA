@@ -55,7 +55,7 @@ We recommend that the scBONITA pipeline is used on a high-performance system wit
 
 Modify the C file to reflect the size of the training data set
     - line 7: NODE is the number of nodes in the dataset (or larger)
-    - line 8: CELL is the number of cells in the dataset (or larger)
+    - line 8: CELL is the number of cells to be sampled from the dataset (or larger)
 
 Next, the C code must be compiled using the make file. Navigate to the folder in which the scBONITA package is located and in a Bash terminal, type
     `make`
@@ -64,21 +64,10 @@ Install the scBonita conda environment from the provided yml file, and activate 
 
 ## Step 1: Set up the scBONITA pipeline.
 
+**Please refer to the tutorial "Rule_Inference_With_scBONITA.ipynb" for a demonstration of rule inference with scBONITA using a test dataset packaged with scBONITA and a list of parameters for the setup. More information can also be found by typing `python3 pipeline.py --help` into the terminal.** 
+
+
 scBONITA needs a training dataset in matrix-style forma; this is usually a tab or comma-delimited file with columns as cells and rows as features. The first column should be feature names and the first row should be cell IDs. The units of the expression data will typically be a variant of log2(TPM +1).
-
-
-The setup pipeline has the following parameters:
-1. dataFile: Specify the name of the file containing processed scRNA-seq data
-1. fullPipeline Should scBonita set up the entire pipeline, starting with generation of network topologies? Accepts values 0 or 1
-1. pathwayList Paths to GRAPHML files that should be used for scBONITA analysis. Usually networks from non-KEGG sources, saved in GRAPHML format
-1. maxNodes Number of genes in the dataset
-1. maxSamples Number of cells in the dataset
-1. separator Delimiting character in dataFile. Must be one of , (comma), \s (space) or \t (tab)
-1. getKEGGPathways Should scBonita automatically identify and download KEGG pathways with genes that are in your dataset? You can specify which pathways using the 
-1. listOfKEGGPathways option, or leave it blank to download all matching KEGG pathways
-1. listOfKEGGPathways Which KEGG pathways should scBonita download? Specify the five letter pathway IDs.
-1. organism Three-letter organism code. Which organism is the dataset derived from?
-1. cvThreshold: Minimum coefficient of variation to retain genes for scBONITA analysis
 
 The following command runs scBONITA setup for a 20000*10000 comma-separated data set "example.csv". It downloads the KEGG pathways hsa00010 and hsa00020 for rule inference.
 
