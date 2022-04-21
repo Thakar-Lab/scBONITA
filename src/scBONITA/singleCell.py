@@ -1000,37 +1000,23 @@ class singleCell(ruleMaker):
         removeZeroAttractors=True,
     ):
 
-        """Uses a dataframe of cells and the attractors to which they are assigned (usually the output of assignAttractors) to generate (a) a barplot showing the frequency of cells assigned to (selected) attractors, optionally faceted by user-specified variables and (b) a 2D scatterplot, such as a UMAP or tSNE plot, showing cells colored by the attractors to which they are assigned.
+        """Takes a list of pathways to search the current working directory for the output of rule inference and to assign attractors for these networks.
 
         Parameters
         ----------
 
-        plottingData: pandas DataFrame
-            Usually a 2-column dataframe where rows = cells (indices must contain the cells in the training dataset) and columns = UMAP or tSNE (or similar) dimensions
-        distanceDF: pandas DataFrame
-            Output of assignAttractors, usually. A pandas DataFrame where rows = cells (indices must contain the cells in the training dataset) and at least one column (specified by attractorsAttribute parameter, see below) contains the attractors to which the cells have been assigned
-        attractorsAttribute: str
+        pathwayFiles: list of strings
+            Each string is a path to the processed graphml files for which rules have been inferred
+        useMinimalRuleSet: Boolean.
+            Whether to use the minimal rule set (True) or to randomly sample the ERS (False)
+        simSteps: number of steps in the simulation to identify attractors
             The column in distanceDF which contains the attractors to which the cells have been assigned. Default is 'decider', as this is the name in the output of assignAttractors
-        allAttractors: bool
-            True if all assigned attractors are to be included in the frequency and UMAP plots. Should usually be 'True' for making preliminary analysis plots, and 'False' while making publication-quality plots, for ease of visualization and to leave out infrequent attractors.
-        numberOfAttractorsToShow: int
-            The number of attractors to be shown in the analysis plots. Used when allAttractors is False. Only the top (numberOfAttractorsToShow) most frequent attractors will be shown. The others will be collapsed into a single category "Others".
-        cmap: str
-            The matplotlib color palette to be used for the analysis plots. Consider using 'colorblind' if the number of categories/attractors is small and a continuous palette such as 'Blues' or 'Greens' if the number is large. See matplotlib documentation for more options on color palettes.
-        makeFrequencyPlots: bool
-            Should frequency plots be made?
-        frequencyGrouping: list
-            List of variables in the plottingData which should be used for faceting the frequency plots. Eg. sample, batch, disease/control, etc.
-        freqplotsFile: str
-            Path to output PDF file for frequency plots. Default plots to the standard output.
-        makeUMAP: bool
-            Should UMAP plots be made?
-        umapFile: str
-            Path to output PDF file for UMAP plots. Default plots to the standard output.
+        removeZeroAttractors: bool
+            Whether or not to remove attractors that have a zero value for all genes
 
         Returns
         -------
-            None
+            Dictionary of dataframes containing distance between attractors and cells for all pathways in pathwayFiles (if rule inference was successful for these pathways).
         """
 
         # get the networks used for rule inference - you can change this parameter when you call the function
@@ -1043,6 +1029,7 @@ class singleCell(ruleMaker):
         # scObject = pickle.load(open(objectFile[0], "rb"))
         featureTable = {}  # record of assignment of cells to attractors
         enumerateDict = {}  # records attractor counts by network
+        distanceDFDict = {} # output - list of dataframes with distance between attractors and cells
         # iterate over all networks used for rule inference
         for pathway in pathwayFiles:
             # if path.exists(str(pathway + "_equivs1.pickle")) and not path.exists(
@@ -1187,9 +1174,10 @@ class singleCell(ruleMaker):
                     + pathway
                 )
                 distanceDF.to_csv(str(pathway + "_attractorDistance.csv"), index=True)
-                return distanceDF
+                distanceDFDict[pathway] = distanceDF
             else:
                 print("No output from rule inference for " + pathway)
+            return distanceDFDict
 
     def makeAttractorHeatmaps(
         self,
