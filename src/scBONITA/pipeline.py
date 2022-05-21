@@ -15,6 +15,7 @@ def runAllNetworks(
     maxSamples=50000,
     partition="standard",
     memory="10G",
+    time="24:00:00",
     module="anaconda3/2020/07",
     condaEnv="scBonita",
     pythonVersion="python3.6",
@@ -25,11 +26,17 @@ def runAllNetworks(
             name = net  # [:-8]
             shellHandle = open(name + "_scoreNodes.sh", "w+")
             slurmCommands = str(
-                "#!/bin/sh\n#SBATCH --partition=standard\n#SBATCH -J "
+                "#!/bin/sh\n#SBATCH --partition="
+                + str(partition)
+                + "\n#SBATCH -J "
                 + name
                 + "\n#SBATCH -o "
                 + name
-                + ".log\n#SBATCH -t 24:00:00\n#SBATCH -n 1\n#SBATCH -c 1\n#SBATCH --mem="+memory+"\nmodule load "
+                + ".log\n#SBATCH -t "
+                + str(time)
+                + "\n#SBATCH -n 1\n#SBATCH -c 1\n#SBATCH --mem="
+                + memory
+                + "\nmodule load "
                 + str(module)
                 + "\nsource activate "
                 + str(condaEnv)
@@ -83,6 +90,7 @@ def pipeline(
     generateSbatch=True,
     partition="standard",
     memory="10G",
+    time="24:00:00",
     module="anaconda3/2020/07",
     condaEnv="scBonita",
     pythonVersion="python3.6",
@@ -137,6 +145,7 @@ def pipeline(
         memory=memory,
         condaEnv=condaEnv,
         module=module,
+        time=time,
         pythonVersion=pythonVersion,
         generateSbatch=generateSbatch,
     )
@@ -159,7 +168,8 @@ if __name__ == "__main__":
         help="Should scBonita set up the entire pipeline, starting with generation of network topologies?Accepts values 0 or 1.",
     )
     parser.add_argument(
-        "--network", help="File name of the processed network for which rules are to be inferred"
+        "--network",
+        help="File name of the processed network for which rules are to be inferred",
     )
     parser.add_argument(
         "--maxNodes", help="Number of genes in the dataset", default=20000, type=int
@@ -202,64 +212,71 @@ if __name__ == "__main__":
         default="hsa",
         type=str,
         choices=k.organismIds,
-        required=False
+        required=False,
     )
     parser.add_argument(
         "--cvThreshold",
         help="Minimum coefficient of variation to retain genes for scBONITA analysis",
         default=None,
         type=float,
-        required=False
+        required=False,
     )
     parser.add_argument(
         "--generateSbatch",
         help="Should scBONITA generate and execute SLURM sbatch scripts to run multiple rule inference jobs?",
         default=False,
         type=bool,
-        choices=[True,False], 
-        required=False
+        choices=[True, False],
+        required=False,
     )
     parser.add_argument(
         "--binarizeThreshold",
         help="Threshold for binarization of the training dataset. Values above this are classed as 1 (or 'on') and values below this are classed as 0 (or 'off').",
         default=None,
         type=float,
-        required=False
+        required=False,
     )
     parser.add_argument(
         "--partition",
-        help="SLURM parameter for generated sbatch scripts, if generateSbatch is True",
+        help="SLURM parameter for generated sbatch scripts, if generateSbatch is True. For more information on SLURM parameters, visit https://slurm.schedmd.com/sbatch.html",
         default="standard",
         type=str,
-        required=False
+        required=False,
     )
     parser.add_argument(
         "--memory",
-        help="SLURM parameter for generated sbatch scripts, if generateSbatch is True",
+        help="SLURM parameter for generated sbatch scripts, if generateSbatch is True. For more information on SLURM parameters, visit https://slurm.schedmd.com/sbatch.html",
         default="10G",
         type=str,
-        required=False
+        required=False,
+    )
+    parser.add_argument(
+        "--time",
+        help="SLURM parameter for generated sbatch scripts, if generateSbatch is True. Specified in HH:MM:SS format. For more information on SLURM parameters, visit https://slurm.schedmd.com/sbatch.html",
+        default="24:00:00",
+        type=str,
+        required=False,
     )
     parser.add_argument(
         "--module",
         help="Python/Anaconda module to be loaded in the generated sbatch scripts, if generateSbatch is True",
         default="anaconda3/2020.07",
         type=str,
-        required=False
+        required=False,
     )
     parser.add_argument(
         "--condaEnv",
         help="conda environment to be activated in the generated sbatch scripts, if generateSbatch is True",
         default="scBonita",
         type=str,
-        required=False
+        required=False,
     )
     parser.add_argument(
         "--pythonVersion",
         help="Python version to be used in the generated sbatch scripts, if generateSbatch is True",
         default="python3.6",
         type=str,
-        required=False
+        required=False,
     )
     parser.add_argument(
         "--sampleCells",
@@ -267,7 +284,7 @@ if __name__ == "__main__":
         choices=[False, True],
         help="If True, scBonita will use a representative set of samples to infer rules. This is automatically done if the maxSamples parameter exceeds 15000, in order to reduce memory usage.",
         default=False,
-        required=False
+        required=False,
     )
     results = parser.parse_args()
     fullPipeline = results.fullPipeline
@@ -286,7 +303,7 @@ if __name__ == "__main__":
     condaEnv = results.condaEnv
     pythonVersion = results.pythonVersion
     generateSbatch = results.generateSbatch
-    partition=results.partition
+    partition = results.partition
     if fullPipeline == 1:
         if dataFile == "":
             dataFile = glob.glob("*.bin")[0]
@@ -307,7 +324,7 @@ if __name__ == "__main__":
             module=module,
             condaEnv=condaEnv,
             pythonVersion=pythonVersion,
-            generateSbatch=generateSbatch
+            generateSbatch=generateSbatch,
         )
     else:
         if fullPipeline == 0:

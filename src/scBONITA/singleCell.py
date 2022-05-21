@@ -22,26 +22,64 @@ class singleCell(ruleMaker):
     """Class for single-cell experiments"""
 
     def __init__(
-        self, dataName, sep, maxNodes=15000, maxSamples=10000, binarizeThreshold=0.001, sampleCells=True
+        self,
+        dataName,
+        sep,
+        maxNodes=15000,
+        maxSamples=10000,
+        binarizeThreshold=0.001,
+        sampleCells=True,
     ):
         """Read in pre-processed data and binarize by threshold"""
         self.sampleList = open(dataName).readline().rstrip()
         self.sampleList = self.sampleList.split(sep)
-        self.sampleList = self.sampleList[1:len(self.sampleList)]
+        self.sampleList = self.sampleList[1 : len(self.sampleList)]
         if maxSamples >= 15000 or sampleCells:
-            maxSamples=min(15000, len(self.sampleList))
-            data = np.loadtxt(dataName, delimiter=sep, dtype="str", usecols=np.insert(np.random.choice(range(1, len(self.sampleList)+1), replace=False, size=maxSamples), 0, 0., axis=0))
-            sampledCellIndices = self.__sampleCells(data=data[1:, 1:], number_cells = maxSamples) #jiayue - modify number_cells
+            maxSamples = min(15000, len(self.sampleList))
+            data = np.loadtxt(
+                dataName,
+                delimiter=sep,
+                dtype="str",
+                usecols=np.insert(
+                    np.random.choice(
+                        range(1, len(self.sampleList) + 1),
+                        replace=False,
+                        size=maxSamples,
+                    ),
+                    0,
+                    0.0,
+                    axis=0,
+                ),
+            )
+            sampledCellIndices = self.__sampleCells(
+                data=data[1:, 1:], number_cells=maxSamples
+            )  # jiayue - modify number_cells
             self.geneList = data[1:, 0]
             print(self.sampleList[0:5], sampledCellIndices[0:5])
-            self.sampleList = [self.sampleList[i]  for i in sampledCellIndices.tolist()]
-            self.expMat = sparse.csr_matrix(data[1:, sampledCellIndices].astype("float"))
+            self.sampleList = [self.sampleList[i] for i in sampledCellIndices.tolist()]
+            self.expMat = sparse.csr_matrix(
+                data[1:, sampledCellIndices].astype("float")
+            )
             print("Length: ", len(sampledCellIndices))
             print("Shape: ", data[1:, sampledCellIndices].shape)
         else:
-            data = np.loadtxt(dataName, delimiter=sep, dtype="str", usecols=np.insert(np.random.choice(range(1, len(self.sampleList)+1), replace=False, size=maxSamples), 0, 0., axis=0))
+            data = np.loadtxt(
+                dataName,
+                delimiter=sep,
+                dtype="str",
+                usecols=np.insert(
+                    np.random.choice(
+                        range(1, len(self.sampleList) + 1),
+                        replace=False,
+                        size=maxSamples,
+                    ),
+                    0,
+                    0.0,
+                    axis=0,
+                ),
+            )
             self.geneList, self.sampleList, self.expMat = (
-                data[1:, 0], 
+                data[1:, 0],
                 data[0, 1:],
                 sparse.csr_matrix(data[1:, 1:].astype("float")),
             )
@@ -53,20 +91,26 @@ class singleCell(ruleMaker):
         self.binMat = preprocessing.binarize(
             self.expMat, threshold=binarizeThreshold, copy=False
         )
-        self.binMat = None #sparse.csr_matrix(self.binMat[1:, sampledCellIndices].astype("int"))
+        self.binMat = (
+            None  # sparse.csr_matrix(self.binMat[1:, sampledCellIndices].astype("int"))
+        )
         self.maxNodes = maxNodes
         self.maxSamples = maxSamples
         # populate binMat to a predefined size
         # self.binMat.resize(self.maxNodes, 1000)
         self.pathwayGraphs = {}
-    
+
     def __sampleCells(self, data, number_cells):
         """Sample a representative population of cells for rule inference - reduce memory requirements"""
-        combined = np.apply_along_axis(lambda x: ''.join(str(x)), axis=0, arr=data[1:, 1:])
-        combined_weights = np.unique(combined, return_counts=True)[1]/len(combined)
-        sampled_cells = np.random.choice(range(len(combined_weights)), size = number_cells, p = combined_weights)
+        combined = np.apply_along_axis(
+            lambda x: "".join(str(x)), axis=0, arr=data[1:, 1:]
+        )
+        combined_weights = np.unique(combined, return_counts=True)[1] / len(combined)
+        sampled_cells = np.random.choice(
+            range(len(combined_weights)), size=number_cells, p=combined_weights
+        )
         sampled_cells = np.delete(sampled_cells, np.where(sampled_cells == 0))
-        return(sampled_cells)
+        return sampled_cells
 
     def __addSubpop(self, subpopFile, sep):
         """Add subpopulation information to object"""
@@ -1029,7 +1073,9 @@ class singleCell(ruleMaker):
         # scObject = pickle.load(open(objectFile[0], "rb"))
         featureTable = {}  # record of assignment of cells to attractors
         enumerateDict = {}  # records attractor counts by network
-        distanceDFDict = {} # output - list of dataframes with distance between attractors and cells
+        distanceDFDict = (
+            {}
+        )  # output - list of dataframes with distance between attractors and cells
         # iterate over all networks used for rule inference
         for pathway in pathwayFiles:
             # if path.exists(str(pathway + "_equivs1.pickle")) and not path.exists(
