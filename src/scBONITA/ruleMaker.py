@@ -353,9 +353,9 @@ class ruleMaker:
                 tempandNodeInvertList.append([0, 0, 0])
             tempandnoder.append(tempAndNodes)
             tempandinverter.append(tempandNodeInvertList)
-        #self.andNodeInvert = np.array(tempandinverter, dtype=np.intc, order="C")
+        # self.andNodeInvert = np.array(tempandinverter, dtype=np.intc, order="C")
         self.andNodeInvert = np.array(tempandinverter, dtype=object, order="C")
-        #self.andNodes = np.array(tempandnoder, dtype=np.intc, order="C")
+        # self.andNodes = np.array(tempandnoder, dtype=np.intc, order="C")
         self.andNodes = np.array(tempandnoder, dtype=object, order="C")
 
     def __genRandBits(self):
