@@ -324,6 +324,7 @@ if __name__ == "__main__":
             module=module,
             condaEnv=condaEnv,
             pythonVersion=pythonVersion,
+            time=time,
             generateSbatch=generateSbatch,
         )
     else:
