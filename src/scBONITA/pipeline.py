@@ -301,6 +301,7 @@ if __name__ == "__main__":
     memory = results.memory
     module = results.module
     condaEnv = results.condaEnv
+    time = results.time
     pythonVersion = results.pythonVersion
     generateSbatch = results.generateSbatch
     partition = results.partition
