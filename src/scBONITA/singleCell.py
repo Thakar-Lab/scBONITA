@@ -28,7 +28,7 @@ class singleCell(ruleMaker):
         maxNodes=15000,
         maxSamples=10000,
         binarizeThreshold=0.001,
-        sampleCells=True,
+        sampleCells=True
     ):
         """Read in pre-processed data and binarize by threshold"""
         self.sampleList = open(dataName).readline().rstrip()
