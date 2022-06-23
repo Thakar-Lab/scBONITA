@@ -20,6 +20,8 @@ def runAllNetworks(
     condaEnv="scBonita",
     pythonVersion="python3.6",
     generateSbatch=True,
+    binarizeThreshold=0.001,
+    sampleCells=True
 ):
     for net in glob.glob("*_processed.graphml"):
         if generateSbatch:
@@ -51,6 +53,8 @@ def runAllNetworks(
                 + str(maxNodes)
                 + " --maxSamples "
                 + str(maxSamples)
+                + "--sampleCells "
+                + str(sampleCells)
             )
             shellHandle.write(slurmCommands)
             shellHandle.close()
@@ -94,9 +98,10 @@ def pipeline(
     module="anaconda3/2020/07",
     condaEnv="scBonita",
     pythonVersion="python3.6",
+    sampleCells=True
 ):
     scTest = singleCell(
-        dataName=dataName, sep=sep, maxNodes=maxNodes, maxSamples=maxSamples
+        dataName=dataName, sep=sep, maxNodes=maxNodes, maxSamples=maxSamples, binarizeThreshold=binarizeThreshold, sampleCells=sampleCells 
     )
     scTest._singleCell__filterData(threshold=cvThreshold)
     if getKEGGPathways:
