@@ -238,7 +238,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--binarizeThreshold",
         help="Threshold for binarization of the training dataset. Values above this are classed as 1 (or 'on') and values below this are classed as 0 (or 'off').",
-        default=None,
+        default=0.001,
         type=float,
         required=False,
     )
