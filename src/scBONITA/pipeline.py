@@ -12,7 +12,6 @@ import subprocess
 def runAllNetworks(
     dataFile,
     maxNodes=20000,
-    #maxSamples=50000,
     partition="standard",
     memory="10G",
     time="24:00:00",
@@ -143,14 +142,11 @@ def pipeline(
     scTest.geneList = [scTest.geneList[node] for node in nodeIndices]
     scTest.nodeList = scTest.geneList
     scTest.nodePositions = [scTest.geneList.index(node) for node in scTest.nodeList]
-    print("Genelist: " + str(scTest.geneList))
-    print("Nodelist: " + str(scTest.nodeList))
-    print("Nodepositions: " + str(scTest.nodePositions))
     pickle.dump(scTest, open(dataName + "scTest.pickle", "wb"))
     runAllNetworks(
         dataFile=dataName,
         maxNodes=maxNodes,
-        maxSamples=15000, #maxSamples,
+        #maxSamples=15000, #maxSamples,
         partition=partition,
         memory=memory,
         condaEnv=condaEnv,
