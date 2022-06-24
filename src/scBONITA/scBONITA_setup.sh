@@ -5,7 +5,7 @@
 #SBATCH -t 1:00:00
 #SBATCH -n 1
 #SBATCH -c 1
-#SBATCH --mem=25G
+#SBATCH --mem=60G
 
 module load anaconda3/2020.07
 
