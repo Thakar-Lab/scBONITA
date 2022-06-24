@@ -28,14 +28,12 @@ int updateBool(int currentNode, int *oldValue,int *nodeIndividual, int andNodes[
             // if a shadow and contributes, compute its value using its upstream nodes
             // calculate value of first then use and to append rest in list of predecessors
             newval=(oldValue[andNodes[andindex][0]]!=andNodeInvertList[andindex][0]);
-            // printf("line 45\n");
 
             for( addnode=1; addnode < 3; addnode++)
             {
-                // printf("line 49\n");
                 if(andNodes[andindex][addnode]>(-1)){newval=(newval && (oldValue[andNodes[andindex][addnode]]!=andNodeInvertList[andindex][addnode]));}
             }
-            // printf("line 53\n");
+
             orset[counter]=newval;
             counter++;
 
@@ -569,16 +567,16 @@ void importanceScore(int simData[STEP][NODE], int *individual,int indLen, int no
     importanceScores[0] = 0.0;
 
     // print out ki and ko node
-    for(i=0; i< nodeNum; i++){
-        attractorAverage_ko[i] = 0.0;
-        attractorAverage_ki[i] = 0.0;
-        if(knockouts[i]==1){
-            printf("KO node: %d, nodePosition: %d\n", i, nodePositions[i]);
-        }
-        if(knockins[i]==1){
-            printf("KI node: %i, nodePosition: %i\n", i, nodePositions[i]);
-        }
-    }
+    //for(i=0; i< nodeNum; i++){
+    //    attractorAverage_ko[i] = 0.0;
+    //    attractorAverage_ki[i] = 0.0;
+    //    if(knockouts[i]==1){
+    //        printf("KO node: %d, nodePosition: %d\n", i, nodePositions[i]);
+    //    }
+    //    if(knockins[i]==1){
+    //      printf("KI node: %i, nodePosition: %i\n", i, nodePositions[i]);
+    //    }
+    //}
 
     //iteration over samples
     for(cell=0; cell<lenSamples; cell++){
@@ -641,7 +639,7 @@ void importanceScore(int simData[STEP][NODE], int *individual,int indLen, int no
             //if (knockouts[0]==1){printf("Temp: %d\n", temp);}
             for(i=0; i<nodeNum; i++){
                 nodePos = nodePositions[i];
-                if (knockouts[0]==1){printf("%d ", simData[temp][nodePos]);}
+                //if (knockouts[0]==1){printf("%d ", simData[temp][nodePos]);}
                 attractorAverage_ko[i] = attractorAverage_ko[i] + (double) (simData[temp][nodePos]/(ko_resSubmit[1] - ko_resSubmit[0])); //this is the attractor
             }
             //if (knockouts[0]==1){printf("\n");}
@@ -711,7 +709,7 @@ void importanceScore(int simData[STEP][NODE], int *individual,int indLen, int no
             //if (knockins[0]==1){printf("Temp: %d\n", temp);}
             for(i=0; i<nodeNum; i++){
                 nodePos = nodePositions[i];
-                if (knockins[0]==1){printf("%d ", simData[temp][nodePos]);}
+                //if (knockins[0]==1){printf("%d ", simData[temp][nodePos]);}
                 attractorAverage_ko[i] = attractorAverage_ko[i] + (double) (simData[temp][nodePos]/(ko_resSubmit[1] - ko_resSubmit[0])); //this is the attractor
             }
             //if (knockins[0]==1){printf("\n");}
@@ -746,7 +744,7 @@ void importanceScore(int simData[STEP][NODE], int *individual,int indLen, int no
         //  importanceScores[0] = importanceScores[0] + 0.0;
         //}
         importanceScores[0] = importanceScores[0] + (fabs(attractorAverage_ki[i] - attractorAverage_ko[i]));
-        printf("KO avg: %f, KI avg: %f, Difference: %f\n", attractorAverage_ko[i], attractorAverage_ki[i], (fabs(attractorAverage_ki[i] - attractorAverage_ko[i])));
+        //printf("KO avg: %f, KI avg: %f, Difference: %f\n", attractorAverage_ko[i], attractorAverage_ki[i], (fabs(attractorAverage_ki[i] - attractorAverage_ko[i])));
     }
     //average over number of cells
     //importanceScores[0] = importanceScores[0]/lenSamples;
