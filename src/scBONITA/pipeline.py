@@ -12,7 +12,7 @@ import subprocess
 def runAllNetworks(
     dataFile,
     maxNodes=20000,
-    maxSamples=50000,
+    #maxSamples=50000,
     partition="standard",
     memory="10G",
     time="24:00:00",
@@ -20,8 +20,6 @@ def runAllNetworks(
     condaEnv="scBonita",
     pythonVersion="python3.6",
     generateSbatch=True,
-    binarizeThreshold=0.001,
-    sampleCells=True
 ):
     for net in glob.glob("*_processed.graphml"):
         if generateSbatch:
@@ -51,10 +49,8 @@ def runAllNetworks(
                 + str(net)
                 + " --maxNodes "
                 + str(maxNodes)
-                + " --maxSamples "
-                + str(maxSamples)
-                + "--sampleCells "
-                + str(sampleCells)
+                #+ " --maxSamples "
+                #+ str(maxSamples)
             )
             shellHandle.write(slurmCommands)
             shellHandle.close()
@@ -74,8 +70,6 @@ def runAllNetworks(
                 + str(net)
                 + " --maxNodes "
                 + str(maxNodes)
-                + " --maxSamples "
-                + str(maxSamples)
             )
 
 
@@ -100,8 +94,17 @@ def pipeline(
     pythonVersion="python3.6",
     sampleCells=True
 ):
+    if sampleCells == "True" or sampleCells == True:
+        sampleCells = True
+    elif sampleCells == "False" or sampleCells == False:
+        sampleCells = False
+    else:
+        sampleCells = False
+    print(["sampleCells", str(sampleCells)])
+    if listOfKEGGPathways is None:
+        listOfKEGGPathways = []
     scTest = singleCell(
-        dataName=dataName, sep=sep, maxNodes=maxNodes, maxSamples=maxSamples, binarizeThreshold=binarizeThreshold, sampleCells=sampleCells 
+        dataName=dataName, sep=sep, maxNodes=maxNodes, binarizeThreshold=binarizeThreshold, sampleCells=sampleCells 
     )
     scTest._singleCell__filterData(threshold=cvThreshold)
     if getKEGGPathways:
@@ -112,7 +115,6 @@ def pipeline(
             organism=organism,
         )
         scTest._singleCell__add_pathways(pathwayGraphs, minOverlap=1)
-        print(scTest.pathwayGraphs)
     else:
         if isinstance(pathwayList, str):
             scTest._singleCell__add_pathways([pathwayList], minOverlap=1)
@@ -136,16 +138,19 @@ def pipeline(
         scTest.expMat, threshold=binarizeThreshold, copy=False
     )  # if data >=0: binMat = 1
     scTest.maxNodes = maxNodes
-    scTest.maxSamples = maxSamples
+    scTest.maxSamples = 15000 #maxSamples
     scTest.binMat.resize((scTest.maxNodes, scTest.maxSamples))
     scTest.geneList = [scTest.geneList[node] for node in nodeIndices]
     scTest.nodeList = scTest.geneList
     scTest.nodePositions = [scTest.geneList.index(node) for node in scTest.nodeList]
+    print("Genelist: " + str(scTest.geneList))
+    print("Nodelist: " + str(scTest.nodeList))
+    print("Nodepositions: " + str(scTest.nodePositions))
     pickle.dump(scTest, open(dataName + "scTest.pickle", "wb"))
     runAllNetworks(
         dataFile=dataName,
         maxNodes=maxNodes,
-        maxSamples=maxSamples,
+        maxSamples=15000, #maxSamples,
         partition=partition,
         memory=memory,
         condaEnv=condaEnv,
@@ -179,9 +184,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--maxNodes", help="Number of genes in the dataset", default=20000, type=int
     )
-    parser.add_argument(
-        "--maxSamples", help="Number of cells in the dataset", default=15000, type=int
-    )
+    #parser.add_argument(
+    #    "--maxSamples", help="Number of cells in the dataset", default=15000, type=int
+    #)
     parser.add_argument(
         "--separator",
         help="Delimiting character in dataFile. Must be one of , (comma), \s (space) or \t (tab) ",
@@ -295,7 +300,7 @@ if __name__ == "__main__":
     fullPipeline = results.fullPipeline
     net = results.network
     maxNodes = results.maxNodes
-    maxSamples = results.maxSamples
+    #maxSamples = results.maxSamples
     dataFile = results.dataFile
     sep = results.separator
     getKEGGPathways = results.getKEGGPathways
@@ -310,6 +315,9 @@ if __name__ == "__main__":
     pythonVersion = results.pythonVersion
     generateSbatch = results.generateSbatch
     partition = results.partition
+    sampleCells = results.sampleCells
+    binarizeThreshold = results.binarizeThreshold
+    binarizeThreshold = float(binarizeThreshold)
     if fullPipeline == 1:
         if dataFile == "":
             dataFile = glob.glob("*.bin")[0]
@@ -318,7 +326,7 @@ if __name__ == "__main__":
         pipeline(
             dataName=dataFile,
             maxNodes=maxNodes,
-            maxSamples=maxSamples,
+            #maxSamples=maxSamples,
             sep=sep,
             getKEGGPathways=getKEGGPathways,
             listOfKEGGPathways=listOfKEGGPathways,
@@ -332,7 +340,10 @@ if __name__ == "__main__":
             pythonVersion=pythonVersion,
             time=time,
             generateSbatch=generateSbatch,
+            binarizeThreshold=binarizeThreshold,
+            sampleCells=sampleCells
         )
+
     else:
         if fullPipeline == 0:
             if dataFile == "":

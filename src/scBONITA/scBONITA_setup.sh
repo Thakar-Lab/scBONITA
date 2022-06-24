@@ -2,10 +2,10 @@
 #SBATCH --partition=debug
 #SBATCH -J setup
 #SBATCH -o setup.log
-#SBATCH -t 0:30:00
+#SBATCH -t 1:00:00
 #SBATCH -n 1
 #SBATCH -c 1
-#SBATCH --mem=10G
+#SBATCH --mem=25G
 
 module load anaconda3/2020.07
 
@@ -16,10 +16,9 @@ make
 
 source activate scBonita
 
-
 #Initiate run
 
-python3.6 pipeline.py --dataFile "mildsevereCOVID__normalized_integrated_counts.csv" --fullPipeline 1 --maxNodes 20000 --maxSamples 100 --separator "," --listOfKEGGPathways "04066" "04010" "04150" "04020" "00020" "04370" "04630" "04668" "04060" "04514" "04670" "04512" "00010" "04625" "04662" "04120" "04062" --getKEGGPathways True --organism "hsa" --generateSbatch True
+python3 pipeline.py --fullPipeline 1 --maxNodes 50000 --separator "," --getKEGGPathways True --organism "hsa" --generateSbatch True --partition standard --time 48:00:00 --binarizeThreshold 0.001 --memory 60G
 
 #Check the progress of jobs using:
 #squeue -u yourNETID

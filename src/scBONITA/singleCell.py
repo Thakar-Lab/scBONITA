@@ -26,53 +26,28 @@ class singleCell(ruleMaker):
         dataName,
         sep,
         maxNodes=15000,
-        maxSamples=10000,
+        #maxSamples=10000,
         binarizeThreshold=0.001,
-        sampleCells=True
+        sampleCells=True,
     ):
         """Read in pre-processed data and binarize by threshold"""
         self.sampleList = open(dataName).readline().rstrip()
         self.sampleList = self.sampleList.split(sep)
         self.sampleList = self.sampleList[1 : len(self.sampleList)]
-        if maxSamples >= 15000 or sampleCells:
-            maxSamples = min(15000, len(self.sampleList))
+        if len(self.sampleList) >= 15000 or sampleCells:
+            maxSamples = 15000
+            print(["maxSamples: ", maxSamples])
+            sampledCellIndices = np.random.choice(
+                        range(1, len(self.sampleList) + 1),
+                        replace=False,
+                        size=min(maxSamples, len(self.sampleList)),
+                    )
+            print(["sampledCellIndices: ", len(sampledCellIndices)])
             data = np.loadtxt(
                 dataName,
                 delimiter=sep,
                 dtype="str",
-                usecols=np.insert(
-                    np.random.choice(
-                        range(1, len(self.sampleList) + 1),
-                        replace=False,
-                        size=maxSamples,
-                    ),
-                    0,
-                    0.0,
-                    axis=0,
-                ),
-            )
-            sampledCellIndices = self.__sampleCells(
-                data=data[1:, 1:], number_cells=maxSamples
-            )  # jiayue - modify number_cells
-            self.geneList = data[1:, 0]
-            print(self.sampleList[0:5], sampledCellIndices[0:5])
-            self.sampleList = [self.sampleList[i] for i in sampledCellIndices.tolist()]
-            self.expMat = sparse.csr_matrix(
-                data[1:, sampledCellIndices].astype("float")
-            )
-            print("Length: ", len(sampledCellIndices))
-            print("Shape: ", data[1:, sampledCellIndices].shape)
-        else:
-            data = np.loadtxt(
-                dataName,
-                delimiter=sep,
-                dtype="str",
-                usecols=np.insert(
-                    np.random.choice(
-                        range(1, len(self.sampleList) + 1),
-                        replace=False,
-                        size=maxSamples,
-                    ),
+                usecols=np.insert(sampledCellIndices,
                     0,
                     0.0,
                     axis=0,
@@ -83,10 +58,23 @@ class singleCell(ruleMaker):
                 data[0, 1:],
                 sparse.csr_matrix(data[1:, 1:].astype("float")),
             )
+            print("Length: ", len(sampledCellIndices))
+            print("Shape: ", self.expMat.shape)
+        else:
+            data = np.loadtxt(
+                dataName,
+                delimiter=sep,
+                dtype="str"
+            )
+            self.geneList, self.sampleList, self.expMat = (
+                data[1:, 0],
+                data[0, 1:],
+                sparse.csr_matrix(data[1:, 1:].astype("float")),
+            )
         data = None
         self.geneList = list(self.geneList)
         self.sampleList = list(self.sampleList)
-        print("Genelist: " + str(self.geneList))
+        print("Genelist: " + str(len(self.geneList)) + " genes" + " First 5 genes: " + str(self.geneList[0:4]))
         self.expMat.eliminate_zeros()
         self.binMat = preprocessing.binarize(
             self.expMat, threshold=binarizeThreshold, copy=False
@@ -95,7 +83,7 @@ class singleCell(ruleMaker):
             None  # sparse.csr_matrix(self.binMat[1:, sampledCellIndices].astype("int"))
         )
         self.maxNodes = maxNodes
-        self.maxSamples = maxSamples
+        self.maxSamples = 15000 #maxSamples
         # populate binMat to a predefined size
         # self.binMat.resize(self.maxNodes, 1000)
         self.pathwayGraphs = {}
