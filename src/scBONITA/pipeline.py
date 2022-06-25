@@ -99,7 +99,13 @@ def pipeline(
         sampleCells = False
     else:
         sampleCells = False
-    print(["sampleCells", str(sampleCells)])
+    if getKEGGPathways == "True" or getKEGGPathways == True:
+        getKEGGPathways = True
+    elif getKEGGPathways == "False" or getKEGGPathways == False:
+        getKEGGPathways = False
+    else:
+        getKEGGPathways = False
+    print(["getKEGGPathways", str(getKEGGPathways)])
     if listOfKEGGPathways is None:
         listOfKEGGPathways = []
     scTest = singleCell(
@@ -192,10 +198,10 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--getKEGGPathways",
-        type=bool,
-        choices=[False, True],
+        type=str,
+        #choices=[False, True],
         help="Should scBonita automatically identify and download KEGG pathways with genes that are in your dataset? You can specify which pathways using the listOfKEGGPathways option, or leave it blank to download all matching KEGG pathways",
-        default=False,
+        default="False",
         required=False,
     )
     parser.add_argument(
@@ -286,10 +292,10 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--sampleCells",
-        type=bool,
-        choices=[False, True],
+        type=str,
+        #choices=[False, True],
         help="If True, scBonita will use a representative set of samples to infer rules. This is automatically done if the maxSamples parameter exceeds 15000, in order to reduce memory usage.",
-        default=False,
+        default="False",
         required=False,
     )
     results = parser.parse_args()

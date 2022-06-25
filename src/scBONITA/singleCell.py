@@ -15,7 +15,8 @@ import os
 import scipy
 from statsmodels.stats.multitest import multipletests
 from pathlib import Path
-
+from multiprocessing.pool import ThreadPool
+import time
 
 class singleCell(ruleMaker):
 
@@ -445,8 +446,6 @@ class singleCell(ruleMaker):
         """Wrapper function - performs rule determination and node scoring in preparation for pathway analysis"""
 
         net = nx.read_graphml(graph)
-        # print(self.geneList)
-        # print(list(net))
         netGenes = [
             self.geneList.index(gene) for gene in list(net) if gene in self.geneList
         ]
@@ -465,6 +464,7 @@ class singleCell(ruleMaker):
         self.__setupEmptyKOKI()
 
         # Genetic algorithm
+        
         population, logbook = self._ruleMaker__eaMuPlusLambdaAdaptive(
             scSyncBoolC, graph
         )
@@ -472,14 +472,38 @@ class singleCell(ruleMaker):
         with open(graph + "_rules_GA.txt", "w") as text_file:
             text_file.write(model.writeModel(out2, model))
         pickle.dump(out2, open(graph + "_out2.pickle", "wb"))
-
+        
+        #out2 = pickle.load(open(graph + "_out2.pickle", "rb")) # for testing only
+        model = self
         # Local search
-        outputs = [
-            self._ruleMaker__checkNodePossibilities(
+        def convenience(node):
+            outputs1[node] = model._ruleMaker__checkNodePossibilities(
+                node, out2, model.knockoutLists, model.knockinLists, scSyncBoolC
+            )
+        # parallel version
+        outputs1 = [0*i for i in  range(0, len(model.nodePositions))]
+        outputs1Pool = ThreadPool() #*int(len(os.sched_getaffinity(0))))
+        start = time.time()
+        outputs1Pool.map(convenience, range(0, len(model.nodePositions)))
+        end = time.time()
+        time_taken = end - start
+        print("Parallel local search: ", str(time_taken))
+        time_taken = np.nan
+        """
+        # sequential version
+        start = time.time()
+        outputs2 = [
+            model._ruleMaker__checkNodePossibilities(
                 node, out2, model.knockoutLists, model.knockinLists, scSyncBoolC
             )
             for node in range(0, len(model.nodePositions))
         ]
+        end = time.time()
+        time_taken = end - start
+        print("Sequential local search: ", str(time_taken))
+        print("Are outputs equal? ", str(outputs1 == outputs2))
+        """
+        outputs = outputs1
         equivs = []
         individual = []
         devs = []
@@ -497,7 +521,6 @@ class singleCell(ruleMaker):
         with open(graph + "_rules_LS.txt", "w") as text_file:
             text_file.write(model.writeModel(bruteout2, model))
         pickle.dump(bruteout2, open(graph + "_bruteout2.pickle", "wb"))
-
         # Importance score calculation
         importanceScores = self._ruleMaker__calcImportance(
             "", self, importanceScore, graph
