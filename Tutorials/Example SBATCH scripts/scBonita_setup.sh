@@ -18,7 +18,7 @@ source activate scBonita
 
 #Initiate run
 
-python3 pipeline.py --fullPipeline 1 --maxNodes 50000 --separator "," --getKEGGPathways True --organism "hsa" --generateSbatch True --partition standard --time 48:00:00 --binarizeThreshold 0.001 --memory 60G
+python3 pipeline.py --fullPipeline 1 --maxNodes 20000 --separator "," --getKEGGPathways True --organism "hsa" --generateSbatch True --partition standard --time 48:00:00 --binarizeThreshold 0.1 --memory 60G
 
 #Check the progress of jobs using:
 #squeue -u yourNETID

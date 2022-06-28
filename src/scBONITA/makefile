@@ -1,2 +1,2 @@
 simulator.so: simulator.c
-	gcc -o $@ -fPIC -O3 -shared $^
+	gcc -fopenmp -o $@ -fPIC -O3 -shared $^

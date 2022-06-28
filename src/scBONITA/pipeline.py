@@ -17,7 +17,7 @@ def runAllNetworks(
     time="24:00:00",
     module="anaconda3/2020/07",
     condaEnv="scBonita",
-    pythonVersion="python3.6",
+    pythonVersion="python3",
     generateSbatch=True,
 ):
     for net in glob.glob("*_processed.graphml"):
@@ -33,7 +33,7 @@ def runAllNetworks(
                 + name
                 + ".log\n#SBATCH -t "
                 + str(time)
-                + "\n#SBATCH -n 1\n#SBATCH -c 1\n#SBATCH --mem="
+                + "\n#SBATCH -n 1\n#SBATCH -c 4\n#SBATCH --mem="
                 + memory
                 + "\nmodule load "
                 + str(module)
@@ -76,7 +76,7 @@ def pipeline(
     dataName="",
     sep=",",
     maxNodes=20000,
-    maxSamples=50000,
+    #maxSamples=50000,
     getKEGGPathways=True,
     listOfKEGGPathways=[],
     pathwayList=[],
@@ -90,7 +90,7 @@ def pipeline(
     time="24:00:00",
     module="anaconda3/2020/07",
     condaEnv="scBonita",
-    pythonVersion="python3.6",
+    pythonVersion="python3",
     sampleCells=True
 ):
     if sampleCells == "True" or sampleCells == True:
@@ -99,7 +99,13 @@ def pipeline(
         sampleCells = False
     else:
         sampleCells = False
-    print(["sampleCells", str(sampleCells)])
+    if getKEGGPathways == "True" or getKEGGPathways == True:
+        getKEGGPathways = True
+    elif getKEGGPathways == "False" or getKEGGPathways == False:
+        getKEGGPathways = False
+    else:
+        getKEGGPathways = False
+    print(["getKEGGPathways", str(getKEGGPathways)])
     if listOfKEGGPathways is None:
         listOfKEGGPathways = []
     scTest = singleCell(
@@ -134,7 +140,7 @@ def pipeline(
     # retain only rows of those genes from binMat
     scTest.expMat = scTest.expMat[nodeIndices, :]
     scTest.binMat = preprocessing.binarize(
-        scTest.expMat, threshold=binarizeThreshold, copy=False
+        scTest.expMat, threshold=binarizeThreshold, copy=True
     )  # if data >=0: binMat = 1
     scTest.maxNodes = maxNodes
     scTest.maxSamples = 15000 #maxSamples
@@ -192,10 +198,10 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--getKEGGPathways",
-        type=bool,
-        choices=[False, True],
+        type=str,
+        #choices=[False, True],
         help="Should scBonita automatically identify and download KEGG pathways with genes that are in your dataset? You can specify which pathways using the listOfKEGGPathways option, or leave it blank to download all matching KEGG pathways",
-        default=False,
+        default="False",
         required=False,
     )
     parser.add_argument(
@@ -280,16 +286,16 @@ if __name__ == "__main__":
     parser.add_argument(
         "--pythonVersion",
         help="Python version to be used in the generated sbatch scripts, if generateSbatch is True",
-        default="python3.6",
+        default="python3",
         type=str,
         required=False,
     )
     parser.add_argument(
         "--sampleCells",
-        type=bool,
-        choices=[False, True],
+        type=str,
+        #choices=[False, True],
         help="If True, scBonita will use a representative set of samples to infer rules. This is automatically done if the maxSamples parameter exceeds 15000, in order to reduce memory usage.",
-        default=False,
+        default="False",
         required=False,
     )
     results = parser.parse_args()

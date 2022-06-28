@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #define STEP 100 //simsteps ROW
-#define NODE 50000 //nodes COL
+#define NODE 20000 // 50000 //nodes COL
 #define CELL 15000 
 
 int updateBool(int currentNode, int *oldValue,int *nodeIndividual, int andNodes[7][3], int andNodeInvertList[7][3], int nodeStart, int nodeEnd)
@@ -28,14 +28,12 @@ int updateBool(int currentNode, int *oldValue,int *nodeIndividual, int andNodes[
             // if a shadow and contributes, compute its value using its upstream nodes
             // calculate value of first then use and to append rest in list of predecessors
             newval=(oldValue[andNodes[andindex][0]]!=andNodeInvertList[andindex][0]);
-            // printf("line 45\n");
 
             for( addnode=1; addnode < 3; addnode++)
             {
-                // printf("line 49\n");
                 if(andNodes[andindex][addnode]>(-1)){newval=(newval && (oldValue[andNodes[andindex][addnode]]!=andNodeInvertList[andindex][addnode]));}
             }
-            // printf("line 53\n");
+
             orset[counter]=newval;
             counter++;
 
@@ -365,121 +363,125 @@ void scSyncBool(int simData[STEP][NODE], int *individual,int indLen, int nodeNum
     int minError;
 
     //iteration over samples
-    for(cell=0; cell<lenSamples; cell++){
-        for(i=0; i<nodeNum; i++){
-            nodePos = nodePositions[i];
-            newValue[i]=binMat[nodePos][cell];
-            simData[0][nodePos]=newValue[i];
-        }
-
-        for(step=1; step < simSteps; step++){
-
-            for(i=0; i < nodeNum; i++){
-                oldValue[i]=newValue[i];
-            }
-            for(i=0; i< nodeNum; i++){
-
-                if(knockouts[i]==1){
-                    temp=0;
-                    newValue[i]=temp;
-                    nodePos = nodePositions[i];
-                    simData[step][nodePos]=temp;
-                    continue;} else if(knockins[i]==1){
-                    temp=1;
-                    newValue[i]=temp;
-                    nodePos = nodePositions[i];
-                    simData[step][nodePos]=temp;
-                    continue;
-                }
-                if (andLenList[i]==1){
-                    temp=(oldValue[andNodes[i][0][0]]!=andNodeInvertList[i][0][0]);
-                    newValue[i]=temp;
-                    nodePos = nodePositions[i];
-                    simData[step][nodePos]=temp;
-                    continue;}
-                else if (andLenList[i]==0){
-                    temp=oldValue[andNodes[i][0][0]];
-                    newValue[i]=temp;
-                    nodePos = nodePositions[i];
-                    simData[step][nodePos]=temp;
-                    continue;}
-                else{
-                    if (i==(nodeNum-1)){nodeEnd=indLen;}
-                    else{nodeEnd=individualParse[i+1];}
-                    nodeStart=individualParse[i];
-                    temp=updateBool(i, oldValue, individual, andNodes[i], andNodeInvertList[i], nodeStart, nodeEnd);
-                    newValue[i]=temp;
-                    nodePos = nodePositions[i];
-                    simData[step][nodePos]=temp;
-                    continue;
-                }
-                //if (simData[step][nodePos] > 1){
-                //  printf("%d %d\n",simData[step][nodePos], binMat[nodePos][cell]);
-                //}
-            }
-            importanceScores=importanceScores+temp;
-        }
-
-        //add error calculation function
-        int resSubmit[2]; //positions of attractor in trajectory
-        getAttract(simData, resSubmit, nodePositions, nodeNum); //get positions of attractor in trajectory
-
-        minError=100000;
-        //printf("%d %d \n",resSubmit[0], resSubmit[1]);
-        //iterate over attractors
-        for(temp=resSubmit[0]; temp<resSubmit[1]; temp++){
-            //printf("Temp: %d\n", temp);
-            //prepare attractor
+    //#pragma omp parallel 
+    //{
+    //    #pragma omp for
+        for(cell=0; cell<lenSamples; cell++){
             for(i=0; i<nodeNum; i++){
                 nodePos = nodePositions[i];
-                //if (simData[step][nodePos] > 0){
-                //  printf("%d %d %d %d %d\n",temp, nodePos, nodeNum, simData[step][nodePos], binMat[nodePos][cell]);
-                //}
-                newValue[i] = simData[temp][nodePos]; //this is the attractor
-                //printf("%d ", newValue[i]);
+                newValue[i]=binMat[nodePos][cell];
+                simData[0][nodePos]=newValue[i];
             }
-            //printf("\n");
+            for(step=1; step < simSteps; step++){
 
-            //calculate error
-            totalError=0;
-            for(i=0; i<nodeNum; i++){
-                nodePos = nodePositions[i]; //prepare cellInitValue from input data
-                //error[i] = abs(newValue[i] - binMat[nodePos][cell]); //why is this always zero?
-                //printf("Error: %f, Node: %d, newValue: %d, binMat: %d\n", error[i], i, newValue[i], binMat[nodePos][cell]);
-                error[i] = abs(newValue[i] - binMat[nodePos][cell]);
-                totalError=totalError+error[i];
-            }
-            //if (totalError > 0){
-                //printf("Total error: %d\n", totalError);
-            //}
-
-            if (totalError < minError){
-                minError = totalError;
-                if (totalError <= 0.001*nodeNum && minError < 10000){ //this condition should change.
-                    minError=0;
-                    if (localSearch){
-                        for(i=0; i<nodeNum; i++){
-                            errors[i] = errors[i] + error[i];
-                        }
-                    } else {
-                        errors[cell] = totalError;
-                    }
-                continue; //I want to break out of the loop that iterates over repeating states and skip to evaluating for the next sample
+                for(i=0; i < nodeNum; i++){
+                    oldValue[i]=newValue[i];
                 }
-            }  else {
-                minError = minError;
+
+                for(i=0; i< nodeNum; i++){
+
+                    if(knockouts[i]==1){
+                        temp=0;
+                        newValue[i]=temp;
+                        nodePos = nodePositions[i];
+                        simData[step][nodePos]=temp;
+                        continue;} else if(knockins[i]==1){
+                        temp=1;
+                        newValue[i]=temp;
+                        nodePos = nodePositions[i];
+                        simData[step][nodePos]=temp;
+                        continue;
+                    }
+                    if (andLenList[i]==1){
+                        temp=(oldValue[andNodes[i][0][0]]!=andNodeInvertList[i][0][0]);
+                        newValue[i]=temp;
+                        nodePos = nodePositions[i];
+                        simData[step][nodePos]=temp;
+                        continue;}
+                    else if (andLenList[i]==0){
+                        temp=oldValue[andNodes[i][0][0]];
+                        newValue[i]=temp;
+                        nodePos = nodePositions[i];
+                        simData[step][nodePos]=temp;
+                        continue;}
+                    else{
+                        if (i==(nodeNum-1)){nodeEnd=indLen;}
+                        else{nodeEnd=individualParse[i+1];}
+                        nodeStart=individualParse[i];
+                        temp=updateBool(i, oldValue, individual, andNodes[i], andNodeInvertList[i], nodeStart, nodeEnd);
+                        newValue[i]=temp;
+                        nodePos = nodePositions[i];
+                        simData[step][nodePos]=temp;
+                        continue;
+                    }
+                    //if (simData[step][nodePos] > 1){
+                    //  printf("%d %d\n",simData[step][nodePos], binMat[nodePos][cell]);
+                    //}
+                }
+                importanceScores=importanceScores+temp;
             }
 
+            //add error calculation function
+            int resSubmit[2]; //positions of attractor in trajectory
+            getAttract(simData, resSubmit, nodePositions, nodeNum); //get positions of attractor in trajectory
+
+            minError=100000;
+            //printf("%d %d \n",resSubmit[0], resSubmit[1]);
+            //iterate over attractors
+            for(temp=resSubmit[0]; temp<resSubmit[1]; temp++){
+                //printf("Temp: %d\n", temp);
+                //prepare attractor
+                for(i=0; i<nodeNum; i++){
+                    nodePos = nodePositions[i];
+                    //if (simData[step][nodePos] > 0){
+                    //  printf("%d %d %d %d %d\n",temp, nodePos, nodeNum, simData[step][nodePos], binMat[nodePos][cell]);
+                    //}
+                    newValue[i] = simData[temp][nodePos]; //this is the attractor
+                    //printf("%d ", newValue[i]);
+                }
+                //printf("\n");
+
+                //calculate error
+                totalError=0;
+                for(i=0; i<nodeNum; i++){
+                    nodePos = nodePositions[i]; //prepare cellInitValue from input data
+                    //error[i] = abs(newValue[i] - binMat[nodePos][cell]); //why is this always zero?
+                    //printf("Error: %f, Node: %d, newValue: %d, binMat: %d\n", error[i], i, newValue[i], binMat[nodePos][cell]);
+                    error[i] = abs(newValue[i] - binMat[nodePos][cell]);
+                    totalError=totalError+error[i];
+                }
+                //if (totalError > 0){
+                    //printf("Total error: %d\n", totalError);
+                //}
+
+                if (totalError < minError){
+                    minError = totalError;
+                    if (totalError <= 0.001*nodeNum && minError < 10000){ //this condition should change.
+                        minError=0;
+                        if (localSearch){
+                            for(i=0; i<nodeNum; i++){
+                                errors[i] = errors[i] + error[i];
+                            }
+                        } else {
+                            errors[cell] = totalError;
+                        }
+                    continue; //I want to break out of the loop that iterates over repeating states and skip to evaluating for the next sample
+                    }
+                }  else {
+                    minError = minError;
+                }
+
+                }
+            //finally
+            if (localSearch){
+                for(i=0; i<nodeNum; i++){
+                    errors[i] = errors[i] + error[i];
+                }
+            } else {
+                errors[cell] = totalError;
             }
-        //finally
-        if (localSearch){
-            for(i=0; i<nodeNum; i++){
-                errors[i] = errors[i] + error[i];
-            }
-        } else {
-            errors[cell] = totalError;
         }
-    }
+    //}
 }
 
 void cluster(int simData[STEP][NODE], int resSubmit[2], int sampleIndex, int *individual,int indLen, int nodeNum, int *andLenList, int *individualParse, int andNodes[NODE][7][3], int andNodeInvertList[NODE][7][3], int simSteps, int *knockouts, int *knockins, int binMat[NODE][CELL], int *nodePositions){
@@ -572,12 +574,12 @@ void importanceScore(int simData[STEP][NODE], int *individual,int indLen, int no
     for(i=0; i< nodeNum; i++){
         attractorAverage_ko[i] = 0.0;
         attractorAverage_ki[i] = 0.0;
-        if(knockouts[i]==1){
-            printf("KO node: %d, nodePosition: %d\n", i, nodePositions[i]);
-        }
-        if(knockins[i]==1){
-            printf("KI node: %i, nodePosition: %i\n", i, nodePositions[i]);
-        }
+        //if(knockouts[i]==1){
+        //    printf("KO node: %d, nodePosition: %d\n", i, nodePositions[i]);
+        //}
+        //if(knockins[i]==1){
+        //    printf("KI node: %i, nodePosition: %i\n", i, nodePositions[i]);
+        //}
     }
 
     //iteration over samples
@@ -641,7 +643,7 @@ void importanceScore(int simData[STEP][NODE], int *individual,int indLen, int no
             //if (knockouts[0]==1){printf("Temp: %d\n", temp);}
             for(i=0; i<nodeNum; i++){
                 nodePos = nodePositions[i];
-                if (knockouts[0]==1){printf("%d ", simData[temp][nodePos]);}
+                //if (knockouts[0]==1){printf("%d ", simData[temp][nodePos]);}
                 attractorAverage_ko[i] = attractorAverage_ko[i] + (double) (simData[temp][nodePos]/(ko_resSubmit[1] - ko_resSubmit[0])); //this is the attractor
             }
             //if (knockouts[0]==1){printf("\n");}
@@ -711,7 +713,7 @@ void importanceScore(int simData[STEP][NODE], int *individual,int indLen, int no
             //if (knockins[0]==1){printf("Temp: %d\n", temp);}
             for(i=0; i<nodeNum; i++){
                 nodePos = nodePositions[i];
-                if (knockins[0]==1){printf("%d ", simData[temp][nodePos]);}
+                //if (knockins[0]==1){printf("%d ", simData[temp][nodePos]);}
                 attractorAverage_ko[i] = attractorAverage_ko[i] + (double) (simData[temp][nodePos]/(ko_resSubmit[1] - ko_resSubmit[0])); //this is the attractor
             }
             //if (knockins[0]==1){printf("\n");}
@@ -746,9 +748,9 @@ void importanceScore(int simData[STEP][NODE], int *individual,int indLen, int no
         //  importanceScores[0] = importanceScores[0] + 0.0;
         //}
         importanceScores[0] = importanceScores[0] + (fabs(attractorAverage_ki[i] - attractorAverage_ko[i]));
-        printf("KO avg: %f, KI avg: %f, Difference: %f\n", attractorAverage_ko[i], attractorAverage_ki[i], (fabs(attractorAverage_ki[i] - attractorAverage_ko[i])));
+        //printf("KO avg: %f, KI avg: %f, Difference: %f\n", attractorAverage_ko[i], attractorAverage_ki[i], (fabs(attractorAverage_ki[i] - attractorAverage_ko[i])));
     }
     //average over number of cells
     //importanceScores[0] = importanceScores[0]/lenSamples;
-    printf("IS: %f\n########\n\n", importanceScores[0]);
+    //printf("IS: %f\n########\n\n", importanceScores[0]);
 }

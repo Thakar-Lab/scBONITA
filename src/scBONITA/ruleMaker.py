@@ -217,7 +217,7 @@ class ruleMaker:
                                     == "u"
                                 ):
                                     print(
-                                        "Unknown interaction type, assigning activation..."
+                                        "Unknown interaction type " + graph[nodeList[node]][nodeList[i]]["interaction"]+ " assigning activation..."
                                     )
                                     activity.append(False)
                                 else:
@@ -233,7 +233,7 @@ class ruleMaker:
                                         activity.append(False)
                                     else:
                                         print(
-                                            "Unknown interaction, assigning activation..."
+                                        "Unknown interaction type " + graph[nodeList[node]][nodeList[i]]["interaction"]+ " assigning activation..."
                                         )
                                         activity.append(False)
                     # check the 'signal' edge attribute
@@ -246,7 +246,7 @@ class ruleMaker:
                             else:
                                 if graph[nodeList[node]][nodeList[i]]["signal"] == "u":
                                     print(
-                                        "Unknown interaction type, assigning activation..."
+                                        "Unknown interaction type " + graph[nodeList[node]][nodeList[i]]["signal"]+ " assigning activation..."
                                     )
                                     activity.append(False)
                                 else:
@@ -260,7 +260,7 @@ class ruleMaker:
                                         activity.append(False)
                                     else:
                                         print(
-                                            "Unknown interaction, assigning activation..."
+                                        "Unknown interaction type " + graph[nodeList[node]][nodeList[i]]["signal"]+ " assigning activation..."
                                         )
                                         activity.append(False)
                     # If neither edge attribute is present, assign activation
@@ -1268,9 +1268,9 @@ class ruleMaker:
         # Create holder for importance scores
         importanceScoresDict = {}
         importanceScoreStdev = {}
-        strat2_IS = {}
-        strat3_IS = {}
-        strat4_IS = {}
+        #strat2_IS = {}
+        #strat3_IS = {}
+        #strat4_IS = {}
         tempList = list(range(0, len(self.nodeList)))
         # shuffle(tempList)
         # print(tempList)
@@ -1406,7 +1406,7 @@ class ruleMaker:
         nx.set_node_attributes(net, values=numZeros, name="abundanceZeros")
         nx.set_node_attributes(net, values=numOnes, name="abundanceOnes")
 
-        nx.write_graphml_lxml(net, graphName[:-26] + "_IS.graphml")
+        nx.write_graphml_lxml(net, str(graphName) + "_IS.graphml")
 
         return importanceScoresDict
 
