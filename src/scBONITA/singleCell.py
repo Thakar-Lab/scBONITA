@@ -473,13 +473,16 @@ class singleCell(ruleMaker):
             text_file.write(model.writeModel(out2, model))
         pickle.dump(out2, open(graph + "_out2.pickle", "wb"))
         
-        #out2 = pickle.load(open(graph + "_out2.pickle", "rb")) # for testing only
+         #out2 = pickle.load(open(graph + "_out2.pickle", "rb")) # for testing only
         model = self
         # Local search
         def convenience(node):
             outputs1[node] = model._ruleMaker__checkNodePossibilities(
                 node, out2, model.knockoutLists, model.knockinLists, scSyncBoolC
             )
+            #pickle.dump(outputs1[node], open(str(node) + "_outputs1.pickle", "wb"))
+        
+        # Local search
         # parallel version
         outputs1 = [0*i for i in  range(0, len(model.nodePositions))]
         outputs1Pool = ThreadPool() #*int(len(os.sched_getaffinity(0))))
@@ -489,6 +492,8 @@ class singleCell(ruleMaker):
         time_taken = end - start
         print("Parallel local search: ", str(time_taken))
         time_taken = np.nan
+        print(outputs1)
+        
         """
         # sequential version
         start = time.time()
@@ -502,7 +507,9 @@ class singleCell(ruleMaker):
         time_taken = end - start
         print("Sequential local search: ", str(time_taken))
         print("Are outputs equal? ", str(outputs1 == outputs2))
+        outputs = outputs2
         """
+        
         outputs = outputs1
         equivs = []
         individual = []
@@ -521,12 +528,13 @@ class singleCell(ruleMaker):
         with open(graph + "_rules_LS.txt", "w") as text_file:
             text_file.write(model.writeModel(bruteout2, model))
         pickle.dump(bruteout2, open(graph + "_bruteout2.pickle", "wb"))
+        
         # Importance score calculation
         importanceScores = self._ruleMaker__calcImportance(
             "", self, importanceScore, graph
         )
         print(importanceScores)
-
+                
     def __scorePathway(self, RAs, pathImportances, pathname):
         """calculate z score for a given pathway"""
         CVdict = {}

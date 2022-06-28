@@ -1406,7 +1406,7 @@ class ruleMaker:
         nx.set_node_attributes(net, values=numZeros, name="abundanceZeros")
         nx.set_node_attributes(net, values=numOnes, name="abundanceOnes")
 
-        nx.write_graphml_lxml(net, graphName[:-26] + "_IS.graphml")
+        nx.write_graphml_lxml(net, str(graphName) + "_IS.graphml")
 
         return importanceScoresDict
 
