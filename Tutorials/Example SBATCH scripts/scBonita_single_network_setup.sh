@@ -18,7 +18,9 @@ source activate scBonita
 
 #Initiate run
 
-python3 pipeline.py --fullPipeline 1 --maxNodes 50000 --separator "," --getKEGGPathways False --pathwayList "temp_series1_net_RELABELED.graphml" --generateSbatch True --partition debug --time 1:00:00 --binarizeThreshold 0.001 --memory 60G
+python3 pipeline.py --fullPipeline 1 --maxNodes 1000 --separator "," --getKEGGPathways False --pathwayList "temp_series1_net_RELABELED.graphml" --generateSbatch True --partition preempt --time 48:00:00 --binarizeThreshold 0.1 --memory 100G
+
+#python3 pipeline.py --fullPipeline 1 --maxNodes 50000 --separator "," --getKEGGPathways True --listOfKEGGPathways "05110" --generateSbatch True --partition debug --time 1:00:00 --binarizeThreshold 0.001 --memory 60G 
 
 #Check the progress of jobs using:
 #squeue -u yourNETID

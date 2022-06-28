@@ -13,7 +13,7 @@ for d in */ ; do
 	cd $d
 	rm *.graphml
 	rm *.log
-	rm *.so 
+	rm *.so
 	cd ..
 	cp *.sh $d
 	cp *.py $d
@@ -22,5 +22,6 @@ for d in */ ; do
 	cp *c $d
 	cd $d
 	sbatch scBonita_setup.sh
+	#sbatch scBonita_single_network_setup.sh
 	cd ..
 done
