@@ -442,7 +442,7 @@ class singleCell(ruleMaker):
         self.knockoutLists = [0] * len(self.nodePositions)
         self.knockinLists = [0] * len(self.nodePositions)
 
-    def __scoreNodes(self, graph):
+    def __scoreNodes(self, graph, parallelSearch = True):
         """Wrapper function - performs rule determination and node scoring in preparation for pathway analysis"""
 
         net = nx.read_graphml(graph)
@@ -473,7 +473,7 @@ class singleCell(ruleMaker):
             text_file.write(model.writeModel(out2, model))
         pickle.dump(out2, open(graph + "_out2.pickle", "wb"))
         
-         #out2 = pickle.load(open(graph + "_out2.pickle", "rb")) # for testing only
+        #out2 = pickle.load(open(graph + "_out2.pickle", "rb")) # for testing only
         model = self
         # Local search
         def convenience(node):
@@ -483,34 +483,37 @@ class singleCell(ruleMaker):
             #pickle.dump(outputs1[node], open(str(node) + "_outputs1.pickle", "wb"))
         
         # Local search
-        # parallel version
-        outputs1 = [0*i for i in  range(0, len(model.nodePositions))]
-        outputs1Pool = ThreadPool() #*int(len(os.sched_getaffinity(0))))
-        start = time.time()
-        outputs1Pool.map(convenience, range(0, len(model.nodePositions)))
-        end = time.time()
-        time_taken = end - start
-        print("Parallel local search: ", str(time_taken))
-        time_taken = np.nan
-        print(outputs1)
-        
+
+        if parallelSearch:
+            # parallel version
+            outputs1 = [0*i for i in  range(0, len(model.nodePositions))]
+            outputs1Pool = ThreadPool() #*int(len(os.sched_getaffinity(0))))
+            start = time.time()
+            outputs1Pool.map(convenience, range(0, len(model.nodePositions)))
+            end = time.time()
+            time_taken = end - start
+            print("Parallel local search: ", str(time_taken))
+            time_taken = np.nan
+            outputs = outputs1
+        else:
+            # sequential version
+            start = time.time()
+            outputs2 = [
+                model._ruleMaker__checkNodePossibilities(
+                    node, out2, model.knockoutLists, model.knockinLists, scSyncBoolC
+                )
+                for node in range(0, len(model.nodePositions))
+            ]
+            outputs = outputs2
+            end = time.time()
+            time_taken = end - start
+            print("Sequential local search: ", str(time_taken))
         """
-        # sequential version
-        start = time.time()
-        outputs2 = [
-            model._ruleMaker__checkNodePossibilities(
-                node, out2, model.knockoutLists, model.knockinLists, scSyncBoolC
-            )
-            for node in range(0, len(model.nodePositions))
-        ]
-        end = time.time()
-        time_taken = end - start
-        print("Sequential local search: ", str(time_taken))
+        # testing
         print("Are outputs equal? ", str(outputs1 == outputs2))
-        outputs = outputs2
-        """
         
-        outputs = outputs1
+        """
+
         equivs = []
         individual = []
         devs = []

@@ -19,6 +19,7 @@ def runAllNetworks(
     condaEnv="scBonita",
     pythonVersion="python3",
     generateSbatch=True,
+    parallelSearch=True
 ):
     for net in glob.glob("*_processed.graphml"):
         if generateSbatch:
@@ -50,6 +51,8 @@ def runAllNetworks(
                 + str(maxNodes)
                 #+ " --maxSamples "
                 #+ str(maxSamples)
+                + " --parallelSearch "
+                + str(parallelSearch)
             )
             shellHandle.write(slurmCommands)
             shellHandle.close()
@@ -91,7 +94,8 @@ def pipeline(
     module="anaconda3/2020/07",
     condaEnv="scBonita",
     pythonVersion="python3",
-    sampleCells=True
+    sampleCells=True,
+    parallelSearch = True
 ):
     if sampleCells == "True" or sampleCells == True:
         sampleCells = True
@@ -99,6 +103,12 @@ def pipeline(
         sampleCells = False
     else:
         sampleCells = False
+    if parallelSearch == "True" or parallelSearch == True:
+        parallelSearch = True
+    elif parallelSearch == "False" or parallelSearch == False:
+       parallelSearch = False
+    else:
+        parallelSearch = False
     if getKEGGPathways == "True" or getKEGGPathways == True:
         getKEGGPathways = True
     elif getKEGGPathways == "False" or getKEGGPathways == False:
@@ -160,6 +170,7 @@ def pipeline(
         time=time,
         pythonVersion=pythonVersion,
         generateSbatch=generateSbatch,
+        parallelSearch=parallelSearch
     )
 
 
@@ -294,7 +305,15 @@ if __name__ == "__main__":
         "--sampleCells",
         type=str,
         #choices=[False, True],
-        help="If True, scBonita will use a representative set of samples to infer rules. This is automatically done if the maxSamples parameter exceeds 15000, in order to reduce memory usage.",
+        help="If True, scBonita will use a representative set of samples to infer rules. This is automatically done if the number of cells in the training dataset exceeds 15000, in order to reduce memory usage.",
+        default="False",
+        required=False,
+    )
+    parser.add_argument(
+        "--parallelSearch",
+        type=str,
+        #choices=[False, True],
+        help="If True, scBonita will use a parallelized local search to speed up the rule inference for large networks (with ~ 100 nodes or more). We suggest setting this to False for smaller networks or for KEGG networks, to reduce memory overheads with minimal loss in speed.",
         default="False",
         required=False,
     )
@@ -320,6 +339,7 @@ if __name__ == "__main__":
     sampleCells = results.sampleCells
     binarizeThreshold = results.binarizeThreshold
     binarizeThreshold = float(binarizeThreshold)
+    parallelSearch = results.parallelSearch
     if fullPipeline == 1:
         if dataFile == "":
             dataFile = glob.glob("*.bin")[0]
@@ -343,7 +363,8 @@ if __name__ == "__main__":
             time=time,
             generateSbatch=generateSbatch,
             binarizeThreshold=binarizeThreshold,
-            sampleCells=sampleCells
+            sampleCells=sampleCells,
+            parallelSearch = parallelSearch
         )
 
     else:
@@ -354,7 +375,7 @@ if __name__ == "__main__":
                 dataFile = str(dataFile)
             print(dataFile)
             scTest = pickle.load(open(dataFile + "scTest.pickle", "rb"))
-            scTest._singleCell__scoreNodes(graph=str(net))
+            scTest._singleCell__scoreNodes(graph=str(net), parallelSearch = parallelSearch)
 
 """
 #TEST
