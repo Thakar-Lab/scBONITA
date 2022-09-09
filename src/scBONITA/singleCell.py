@@ -464,7 +464,7 @@ class singleCell(ruleMaker):
         self.__setupEmptyKOKI()
 
         # Genetic algorithm
-        
+        """
         population, logbook = self._ruleMaker__eaMuPlusLambdaAdaptive(
             scSyncBoolC, graph
         )
@@ -472,8 +472,8 @@ class singleCell(ruleMaker):
         with open(graph + "_rules_GA.txt", "w") as text_file:
             text_file.write(model.writeModel(out2, model))
         pickle.dump(out2, open(graph + "_out2.pickle", "wb"))
-        
-        #out2 = pickle.load(open(graph + "_out2.pickle", "rb")) # for testing only
+        """
+        out2 = pickle.load(open(graph + "_out2.pickle", "rb")) # for testing only
         model = self
         # Local search
         def convenience(node):
