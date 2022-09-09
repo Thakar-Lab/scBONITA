@@ -1,0 +1,1051 @@
+---
+title: "Pre-processing of scRNA-seq data"
+author: "Mukta G. Palshikar"
+date: "September 9, 2022"
+output: html_document
+---
+
+# Load required libraries
+
+```{r load_libraries}
+
+require(Seurat)
+require(dplyr)
+require(reshape)
+require(wesanderson)
+require(gplots)
+require(RColorBrewer)
+require(openxlsx)
+require(ggpubr)
+require(clusterProfiler)
+require(msigdbr)
+require(scales)
+require(enrichplot)
+
+setwd("D:\\GitHub\\fuzzyRNA\\clustering\\")
+
+sessionInfo()
+
+```
+
+# Load data
+
+The folder minimal_scRNAseq_data contains one folder per subject. Each folder contains three files:
+  barcodes.tsv
+  genes.tsv
+  matrix.mtx
+
+```{r load_data}
+dataset_loc <-  paste0(getwd(), "/anonymized_scRNAseq_data")
+patients = c(
+  "Sample_Participant_6",
+  "Sample_Participant_2",
+  "Sample_Participant_5",
+  "Sample_Participant_7",
+  "Sample_Participant_8",
+  "Sample_Participant_3",
+  "Sample_Participant_4",
+  "Sample_Participant_1"
+)
+
+d10x.data <- sapply(patients, function(i) {
+  d10x <-
+    Read10X(file.path(dataset_loc, i))
+  colnames(d10x) <-
+    paste(sapply(strsplit(colnames(d10x), split = "-"), '[[', 1L), i, sep =
+            "-")
+  d10x
+})
+experiment.data <- do.call("cbind", d10x.data)
+dim(experiment.data)
+```
+
+# Create Seurat object
+
+Initialize the Seurat object with the raw (non-normalized data).
+
+Keep all genes expressed in >= 15 cells (approximately 0.1% of the data). Keep all cells with at least 200 detected genes
+
+```{r makeObject}
+scRNA <- CreateSeuratObject(
+  experiment.data,
+  project = "sc_HIV",
+  min.cells = 15,
+  min.genes = 200,
+  names.field = 2,
+  names.delim = "\\-"
+)
+scRNA
+```
+# Add metadata to the Seurat object, and visualize their distributions
+
+The number of genes and UMIs (nGene and nUMI) are automatically calculated for every object by Seurat.
+For non-UMI data, nUMI represents the sum of the non-normalized values within a cell
+We calculate the percentage of mitochondrial genes here and store it in percent.mito using AddMetaData.
+AddMetaData adds columns to object@meta.data
+We use object@raw.data since this represents non-transformed and non-log-normalized counts
+The % of UMI mapping to MT-genes is a common scRNA-seq QC metric.
+"The proportion of reads mapping to the mitochondrial genome may also be useful in identifying low-quality cells because in a broken cell cytoplasmic RNA will be lost, while RNAs that are enclosed in the mitochondria will be retained" : https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4823857/
+Fix the sample names, reassign names with more meaningful factors
+The original samples names (the names above in ids) can be found in the metadata slot, column orig.ident.
+Here we build a new metadata variable 'batchid' which can be used to specify treatment groups.
+
+```{r metadata}
+samplename = scRNA@meta.data$orig.ident
+table(samplename)
+
+batchid = rep("Patient_ID", length(samplename))
+batchid[samplename %in% c("Sample_Participant_6")] = c("Participant_6")
+batchid[samplename %in% c("Sample_Participant_2")] = c("Participant_2")
+batchid[samplename %in% c("Sample_Participant_5")] = c("Participant_5")
+batchid[samplename %in% c("Sample_Participant_7")] = c("Participant_7")
+batchid[samplename %in% c("Sample_Participant_8")] = c("Participant_8")
+batchid[samplename %in% c("Sample_Participant_3")] = c("Participant_3")
+batchid[samplename %in% c("Sample_Participant_4")] = c("Participant_4")
+batchid[samplename %in% c("Sample_Participant_1")] = c("Participant_1")
+names(batchid) = rownames(scRNA@meta.data)
+
+scRNA <- AddMetaData(object = scRNA,
+                     metadata = batchid,
+                     col.name = "batchid")
+
+patient_data = read.csv("HIVAS_participants_clinical_covariates.csv")
+head(patient_data)
+patient_data$PlaqueScore = as.numeric(patient_data$PlaqueScore)
+patient_data$PlaqueScore = unlist(lapply(patient_data$PlaqueScore, function(x) {
+  if (x == 2) {
+    return("AS+")
+  } else{
+    return("AS-")
+  }
+}))
+age = scRNA@meta.data$batchid
+age = sapply(
+  age,
+  FUN = function(x) {
+    return(patient_data$Age[patient_data$ParticipantId == x])
+  }
+)
+names(age) = rownames(scRNA@meta.data)
+scRNA <- AddMetaData(object = scRNA,
+                     metadata = age,
+                     col.name = "age")
+
+cohort = scRNA@meta.data$batchid
+cohort = sapply(
+  cohort,
+  FUN = function(x) {
+    return(patient_data$Cohort[patient_data$ParticipantId == x])
+  }
+)
+names(cohort) = rownames(scRNA@meta.data)
+scRNA <- AddMetaData(object = scRNA,
+                     metadata = cohort,
+                     col.name = "cohort")
+
+chol = scRNA@meta.data$batchid
+chol = sapply(
+  chol,
+  FUN = function(x) {
+    return(patient_data$chol[patient_data$ParticipantId == x])
+  }
+)
+names(chol) = rownames(scRNA@meta.data)
+scRNA <- AddMetaData(object = scRNA,
+                     metadata = chol,
+                     col.name = "chol")
+
+HDL = scRNA@meta.data$batchid
+HDL = sapply(
+  HDL,
+  FUN = function(x) {
+    return(patient_data$HDL[patient_data$ParticipantId == x])
+  }
+)
+names(HDL) = rownames(scRNA@meta.data)
+scRNA <- AddMetaData(object = scRNA,
+                     metadata = HDL,
+                     col.name = "HDL")
+
+PlaqueScore = scRNA@meta.data$batchid
+PlaqueScore = sapply(
+  PlaqueScore,
+  FUN = function(x) {
+    return(patient_data$PlaqueScore[patient_data$ParticipantId == x])
+  }
+)
+names(PlaqueScore) = rownames(scRNA@meta.data)
+scRNA <- AddMetaData(object = scRNA,
+                     metadata = PlaqueScore,
+                     col.name = "PlaqueScore")
+
+head(scRNA@meta.data)
+slotNames(scRNA)
+table(scRNA@meta.data$orig.ident)
+
+a = FetchData(scRNA, c("orig.ident", "PlaqueScore"))
+a$cells = rownames(a)
+b = a %>% group_by(orig.ident, PlaqueScore) %>% tally()
+b = as.data.frame(b)
+colnames(b) = c("orig.ident", "PlaqueScore", "Number.of.cells")
+rownames(b) = b$orig.ident
+b = b[, c("PlaqueScore", "Number.of.cells")]
+b$PlaqueScore = as.factor(b$PlaqueScore)
+metadata = cbind(patient_data, b)
+metadata = as.data.frame(metadata)
+#metadata = melt(metadata, id.vars = "PlaqueScore")
+metadata$PlaqueScore = as.factor(metadata$PlaqueScore)
+svg("before_filtering.svg", height = 4)
+boxplot(metadata$Number.of.cells ~ metadata$PlaqueScore,
+        col = as.vector(wes_palette(name = "Darjeeling1"))[c(3, 5)])
+dev.off()
+mito.genes <-
+  grep(pattern = "^MT-",
+       x = rownames(x = scRNA@data),
+       value = TRUE)
+percent.mito <-
+  Matrix::colSums(scRNA@raw.data[mito.genes, ]) / Matrix::colSums(scRNA@raw.data)
+percent.mito = percent.mito * 100
+scRNA <-
+  AddMetaData(object = scRNA,
+              metadata = percent.mito,
+              col.name = "percent.mito")
+range(scRNA@meta.data$percent.mito)
+VlnPlot(
+  object = scRNA,
+  features.plot = c("nGene", "nUMI", "percent.mito"),
+  nCol = 3,
+  same.y.lims = FALSE,
+  y.lab.rot = TRUE
+  
+)
+
+```
+
+# Save data
+
+Write out a tab-delimited table of the RAW data that can be read into excel
+Save the original dataset in Seurat class, with no filtering
+Clear environment (for efficient memory usage)
+This chunk should not be evaluated if you need to run the entire pipeline in one step.
+
+```{r save_step1, eval=FALSE}
+
+write.table(
+  as.matrix(experiment.data),
+  "raw.datatable.txt",
+  sep = "\t",
+  col.names = T,
+  row.names = T
+)
+
+save(scRNA, file = "original_seurat_object.RData")
+
+rm(list = ls())
+library(Seurat)
+load(file = "original_seurat_object.RData")
+scRNA
+```
+
+## Calculate additional quality metrics
+
+#5% quantiles for number of genes per cell per sample
+#5% qunatiles for number of UMI per cell per sample
+#5% qunatiles for number of mitochondrial percentage per cell per sample
+#Plot the number of cells each gene is represented by
+# GenePlot is typically used to visualize gene-gene relationships, but can be used for anything calculated by the object, i.e. columns in object@meta.data, PC scores etc.
+# Since there is a rare subset of cells with an outlier level of high mitochondrial percentage and also low UMI content, we can filter these as well
+
+```{r quality}
+do.call("cbind",
+        tapply(
+          scRNA@meta.data$nGene,
+          scRNA@ident,
+          quantile,
+          probs = seq(0, 1, 0.05)
+        ))
+do.call("cbind",
+        tapply(scRNA@meta.data$nUMI, scRNA@ident, quantile, probs = seq(0, 1, 0.05)))
+round(do.call(
+  "cbind",
+  tapply(
+    scRNA@meta.data$percent.mito,
+    scRNA@ident,
+    quantile,
+    probs = seq(0, 1, 0.05)
+  )
+), digits = 3)
+plot(
+  sort(Matrix::rowSums(scRNA@data >= 2)) ,
+  xlab = "gene rank",
+  ylab = "number of cells",
+  main = "Cells per genes ( >= 2 )"
+)
+# tiff(filename = "GenePlots.tif")
+par(mfrow = c(2, 1))
+GenePlot(object = scRNA,
+         gene1 = "nUMI",
+         gene2 = "percent.mito")
+abline(h = 5, col = "red")
+abline(h = 0, col = "black")
+GenePlot(object = scRNA,
+         gene1 = "nUMI",
+         gene2 = "nGene")
+abline(h = 2500, col = "red")
+abline(h = 200, col = "red")
+# dev.off()
+```
+
+# Cell filtering
+We filter out cells that have unique gene counts over 2,500 or less than 200
+Note that low.thresholds and high.thresholds are used to define a 'gate'.
+-Inf and Inf should be used if you don't want a lower or upper threshold.
+
+```{r filter}
+scRNA = FilterCells(
+  object = scRNA,
+  subset.names = c("nGene", "percent.mito"),
+  low.thresholds = c(200,-Inf),
+  high.thresholds = c(2500, 5)
+)
+table(scRNA@meta.data$batchid)
+```
+# Normalization
+
+After removing unwanted cells from the dataset, the next step is to normalize the data.
+By default, we employ a global-scaling normalization method "LogNormalize" that normalizes the gene expression measurements for each cell by the total expression, multiplies this by a scale factor (10,000 by default), and log-transforms the result.
+
+```{r normalization}
+
+hist(
+  colSums(scRNA@data),
+  breaks = 100,
+  main = "Total expression before normalisation",
+  xlab = "Sum of expression"
+)
+scRNA = NormalizeData(
+  object = scRNA,
+  normalization.method = "LogNormalize",
+  scale.factor = 1e4
+)
+hist(
+  colSums(scRNA@data),
+  breaks = 100,
+  main = "Total expression after normalisation",
+  xlab = "Sum of expression"
+)
+
+```
+
+
+# Detection of variable genes across the single cells
+
+Seurat calculates highly variable genes and focuses on these for downstream analysis.
+**`FindVariableGenes`** calculates the average expression and dispersion for each gene, places these genes into bins, and then calculates a z-score for dispersion within each bin.
+This helps control for the relationship between variability and average expression.
+This function is significantly updated in newer versions of Seurat.
+
+```{r findHVGs}
+scRNA =
+  FindVariableGenes(
+    object = scRNA,
+    mean.function = ExpMean,
+    dispersion.function = LogVMR,
+    x.low.cutoff = 0.0125,
+    x.high.cutoff = 4,
+    y.cutoff = 1,
+    y.high.cutoff = Inf
+  )
+abline(h = 1, col = "red")
+abline(v = 4, col = "red")
+abline(v = 0.0125, col = "red")
+length(x = scRNA@var.genes) # number of variable genes
+```
+
+
+# Save objects and reload, step 2 - OPTIONAL
+
+Save the processed dataset.
+Clear environment (for efficient memory usage)
+This chunk should not be evaluated if you need to run the entire pipeline in one step.
+
+```{r save_step2, eval=FALSE}
+save(scRNA, file = "pre_sample_corrected.RData")
+rm(list = ls())
+library(Seurat)
+load(file = "pre_sample_corrected.RData")
+scRNA
+```
+
+# Correct for sample to sample differences
+**`ScaleData**` - Scales and centers genes in the dataset.
+If variables are provided in vars.to.regress, they are individually regressed against each gene, and the resulting residuals are then scaled and centered.
+Here we use only the highly variable genes identified above and then regress out for sample (orig.ident) and percentage mitochondria (percent.mito).
+I don't actually scale or re-center the data - note that all options are set to FALSE. I need to run this step so that the scale.data slot in the Seurat object is created and populated with the normalized data. This slot is used for downstream processing and not having it will require a lot of fiddling with options later.
+I used to regress out the cell cycle genes and the mitochondrial genes but found that it didn't make any difference in downstream analysis. The code is retained but commented out, ie, it is not run. Andrew McDavid recommended leaving this out in the interests of keeping data processing to a minimum. It might be useful for other data sets. 
+
+```{r scale}
+scRNA = ScaleData(object = scRNA,
+                  do.scale = FALSE,
+                  do.center = FALSE)
+#,vars.to.regress = c("percent.mito")#c("orig.ident", "percent.mito"))
+```
+
+
+# Dimensionality reduction
+Next we perform PCA on the scaled data.
+By default, the genes in `object@var.genes` are used as input, but can be defined using pc.genes.
+We have typically found that running dimensionality reduction on highly variable genes can improve performance.
+However, with UMI data - particularly after regressing out technical variables, we often see that PCA returns similar (albeit slower) results when run on much larger subsets of genes, including the whole transcriptome.
+
+```{r runPCA}
+scRNA = RunPCA(
+  object = scRNA,
+  pc.genes = scRNA@var.genes,
+  do.print = FALSE,
+  pcs.compute = 40
+)
+```
+
+# Examine gene loadings in each principal component - Also called factor loadings/component loadings.
+The gene loadings are the correlation coefficients between the genes (variables/rows) and (factors/columns).
+
+```{r geneLoadings}
+heatmap.2((scRNA@dr$pca@gene.loadings),
+          Rowv = NA,
+          Colv = NA,
+          col = rainbow(2),
+          xlab = "Principal components",
+          ylab = "Genes",
+          trace = "none",
+          distfun   = function(x)
+            as.dist(1 - cor(t(x))),
+          hclustfun = function(x)
+            hclust(x, method = "ave")
+)
+```
+# Visualizing cells and genes that define the PCA
+
+**`PrintPCA**` prints the genes that most strongly define a set of principle components.
+**`VizPCA**` visualizes the top genes associated with principal components.
+
+```{r vizPCA}
+PrintPCA(
+  object = scRNA,
+  pcs.print = 1:10,
+  genes.print = 20,
+  use.full = FALSE
+)
+VizPCA(object = scRNA, pcs.use = 1:2)
+VizPCA(object = scRNA, pcs.use = 2:3)
+VizPCA(object = scRNA, pcs.use = 3:4)
+VizPCA(object = scRNA, pcs.use = 5:6)
+VizPCA(object = scRNA, pcs.use = 7:8)
+VizPCA(object = scRNA, pcs.use = 9:10)
+VizPCA(object = scRNA, pcs.use = 1:10)
+par(mfrow = c(1, 2))
+PCAPlot(object = scRNA,
+        dim.1 = 1,
+        dim.2 = 2)
+PCAPlot(object = scRNA,
+        dim.1 = 3,
+        dim.2 = 4)
+```
+
+# **`ProjectPCA**` scores each gene in the dataset (including genes not included in the PCA) based on their correlation with the calculated components.
+Though we do not use this further here, it can be used to identify markers that are strongly correlated with cellular heterogeneity, but may not have passed through variable gene selection. The results of the projected PCA can be explored by setting use.full=T in the functions above.
+
+```{r projectPCA}
+scRNA = ProjectPCA(object = scRNA, do.print = TRUE)
+```
+
+## **`PCHeatmap**` allows for easy exploration of the primary sources of heterogeneity in a dataset.
+It can be useful when trying to decide which PCs to include for further downstream analyses.
+Both cells and genes are ordered according to their PCA scores.
+Setting cells.use to a number plots the 'extreme' cells on both ends of the spectrum,
+which dramatically speeds plotting for large datasets.
+Though clearly a supervised analysis, we find this to be a valuable tool for exploring correlated gene sets.
+
+```{r pcHeatmap}
+PCHeatmap(
+  object = scRNA,
+  pc.use = 1,
+  cells.use = 500,
+  do.balanced = TRUE,
+  label.columns = FALSE
+)
+PCHeatmap(
+  object = scRNA,
+  pc.use = 1:6,
+  cells.use = 500,
+  do.balanced = TRUE,
+  label.columns = FALSE,
+  use.full = FALSE
+)
+PCHeatmap(
+  object = scRNA,
+  pc.use = 1:10,
+  cells.use = 500,
+  do.balanced = TRUE,
+  label.columns = FALSE,
+  use.full = FALSE
+)
+```
+
+# Determine statistically significant principal components
+To overcome the extensive technical noise in any single gene for scRNA-seq data, Seurat clusters cells based on their PCA scores, with each PC essentially representing a 'metagene' that combines information across a correlated gene set.
+Determining how many PCs to include downstream is therefore an important step.
+A more ad hoc method for determining which PCs to use is to look at a plot of the standard deviations of the principle components and draw your cutoff where there is a clear elbow in the graph. This can be done with **`PCElbowPlot**`.
+In this example, it looks like the elbow would fall around PC 9
+
+```{r elbow}
+
+PCElbowPlot(object = scRNA,
+            num.pc = 40)
+
+```
+
+# Save, step 3 - NOT OPTIONAL
+
+You must run this step. At this stage in the analysis, there are many objects in the environment that we no longer need. Clearing the environment and reloading a saved data set is a more efficient use of memory.
+
+```{r, saveStep3}
+save(scRNA, file = "pca_sample_corrected.RData")
+rm(list = ls())
+```
+
+
+```{r reloadData}
+require(Seurat)
+require(knitr)
+require(openxlsx)
+require(dplyr)
+load(file = "pca_sample_corrected.RData")
+scRNA2=scRNA
+scRNA = NULL
+scRNA2 = SetAllIdent(scRNA2, id="orig.ident")
+```
+
+# Cluster at an optimized resolution
+
+We identified the optimal resolution of Seurat's clustering algorithm, by clustering just 1000 cells at a time, adding remaining cells back in and then identifying cell cluster identities. We also re-clustered individual clusters to identify sub-types that may not be necessarily identified by clustering of all the cells together. This code is not shown here since it never made it to the manuscript.
+
+```{r cluster}
+res = 1.5
+scRNA2 = FindClusters(
+    object = scRNA2,
+    reduction.type = "pca",
+    dims.use = 1:10,
+    resolution = res,
+    print.output = 0,
+    save.SNN = TRUE,
+    force.recalc = TRUE
+    )
+scRNA2=SetAllIdent(scRNA2, id ="res.1.5")
+
+scRNA2.markers = invisible(FindAllMarkers(
+  object = scRNA2,
+  only.pos = TRUE,
+  min.pct = 0.25,
+  thresh.use = 0.25
+))
+
+
+```
+
+# Optional save/reload step
+
+```{r, eval=FALSE}
+save(scRNA2, scRNA2.markers, file="scRNA2_and_markers.RData") # save dataset
+load("scRNA2_and_markers.RData")
+
+```
+
+
+# Cell cluster labeling with CIBERSORT/GVSA/ORA
+
+These cell identities come from an external CIBERSORT analysis.
+
+```{r}
+
+
+cibersort_majority = c("0" = "B cells naive - 1", "1" = "T cells CD8 - 1", "2" = "T cells CD4 - 1", "3" = "T cells CD8/CD4/CD4 naive", "4" = "T cells CD8 naive/T cells CD8/ RBCs", "5" = "B cells naive - 2", "6" = "T cells naive", "7" = "T cells CD8 - 2", "8" = "T cells CD8 - 3", "9" = "NK cells resting", "10"  = "T cells CD8 - 4", "11" = "T cells CD8/NK cells resting", "12" = "T cells CD4 memory resting/ T cells CD8", "13" = "B cells memory", "14" = "Monocytes", "15" = "NK cells activated")
+scRNA2@meta.data$ClusterName =  plyr::revalue(x = as.character(scRNA2@meta.data$res.1.5), replace = cibersort_majority, warn_missing = TRUE)
+
+scRNA2 = SetAllIdent(scRNA2, id='ClusterName')
+
+```
+
+# Write out processed data and metadata for GEO submission
+
+This is where we anonymize the participant IDs. I repeat:
+
+## THE PATIENT IDS ARE STRICTLY CONFIDENTIAL.
+
+```{r}
+
+# Add anonymized participant IDs to the metadata
+
+anonIDs = c("VP090" = "Participant_1",
+            "VP029" = "Participant_2",
+            "VP086" = "Participant_3",
+            "VP087" = "Participant_4",
+            "VP058" = "Participant_5",
+            "VP021" = "Participant_6",
+            "VP067" = "Participant_7",
+            "VP073" = "Participant_8"
+            )
+scRNA2@meta.data$ParticipantID =  plyr::revalue(x = as.character(scRNA2@meta.data$batchid), replace = anonIDs, warn_missing = TRUE)
+
+```
+
+# Write out processed data as a CSV
+
+```{r, eval=FALSE}
+write.csv(as.matrix(scRNA2@data), file="complete_data_processed_data.csv")
+```
+
+# Write out raw data as a CSV
+
+```{r, eval=FALSE}
+write.csv(as.matrix(scRNA2@raw.data), file="complete_data_raw_data.csv")
+```
+
+# Write out metadata as a CSV
+
+```{r, eval=FALSE}
+write.csv(as.matrix(scRNA2@meta.data), file="complete_metadata.csv")
+```
+
+# Write out processed expression data and metadata for each subpopulation separately
+
+```{r, eval=FALSE}
+cibersort_majority = c("0" = "B cells naive - 1", "1" = "T cells CD8 - 1", "2" = "T cells CD4 - 1", "3" = "T cells CD8/CD4/CD4 naive", "4" = "T cells CD8 naive/T cells CD8/ RBCs", "5" = "B cells naive - 2", "6" = "T cells naive", "7" = "T cells CD8 - 2", "8" = "T cells CD8 - 3", "9" = "NK cells resting", "10"  = "T cells CD8 - 4", "11" = "T cells CD8/NK cells resting", "12" = "T cells CD4 memory resting/ T cells CD8", "13" = "B cells memory", "14" = "Monocytes", "15" = "NK cells activated")
+scRNA2@meta.data$ClusterName =  plyr::revalue(x = as.character(scRNA2@meta.data$res.1.5), replace = cibersort_majority, warn_missing = TRUE)
+
+#for (sample in unique(scRNA2@meta.data$orig.ident)){
+for (sample in unique(scRNA2@meta.data$ParticipantID)){
+  print(sample)
+  orig.ident = as.vector(unique(scRNA2@meta.data$orig.ident[scRNA2@meta.data$ParticipantID == sample]))
+  orig.ident = gsub("Sample_", "", orig.ident)
+  patientCells = rownames(scRNA2@meta.data[scRNA2@meta.data$ParticipantID  == sample,])
+  patientData = as.data.frame(as.matrix(scRNA2@data)[,patientCells])
+  colnames(patientData) = gsub("Sample.*$", anonIDs[orig.ident], colnames(patientData))
+  print(dim(patientData))
+  print(patientData[1:5,1:5])
+  write.csv(patientData, file = paste(sample,"_processed_gene_expression_data.csv",sep=""))
+  patientMetaData = scRNA2@meta.data[patientCells,c("nGene",  "nUMI", "ParticipantID","chol", "HDL",  "PlaqueScore",  "percent.mito", "ClusterName")]
+  colnames(patientMetaData) = c("numberOfGenes", "numberUMI", "ParticipantID", "cholesterol", "HDL",  "Atherosclerosis Status",   "percent.mitochondrial.genes", "ClusterName")
+  patientMetaData$HIVstatus = "HIV+"
+  rownames(patientMetaData) = gsub("Sample.*$", anonIDs[orig.ident], rownames(patientMetaData))
+  write.csv(patientMetaData, file = paste(sample,"_metadata.csv",sep=""))
+}
+```
+
+# Identify differentially populated cell clusters, ie, which clusters have disproportionate numbers of AS+ or AS- cells
+
+
+```{r}
+
+cellCounts = scRNA2@meta.data %>% dplyr::count(PlaqueScore, res.1.5, orig.ident)
+subjectCounts = scRNA2@meta.data %>% dplyr::count( orig.ident)
+cellCounts$Proportion = NA
+for (i in 1:length(cellCounts$orig.ident)){
+  subjectCount = subjectCounts$n[subjectCounts$orig.ident == cellCounts$orig.ident[i]]
+  cellCounts$Proportion[i] = cellCounts$n[i]/subjectCount
+}
+cellCounts$Proportion = cellCounts$Proportion * 100
+cibersort_majority = c("0" = "B cells naive - 1", "1" = "T cells CD8 - 1", "2" = "T cells CD4 - 1", "3" = "T cells CD8/CD4/CD4 naive", "4" = "T cells CD8 naive/T cells CD8/ RBCs", "5" = "B cells naive - 2", "6" = "T cells naive", "7" = "T cells CD8 - 2", "8" = "T cells CD8 - 3", "9" = "NK cells resting", "10"  = "T cells CD8 - 4", "11" = "T cells CD8/NK cells resting", "12" = "T cells CD4 memory resting/ T cells CD8", "13" = "B cells memory", "14" = "Monocytes", "15" = "NK cells activated")
+cellCounts$ClusterNames =  plyr::revalue(x = as.character(cellCounts$res.1.5), replace = cibersort_majority, warn_missing = TRUE)
+for (i in levels(as.factor(cellCounts$res.1.5))){
+  temp = cellCounts[cellCounts$res.1.5 == i,]
+  a = temp$Proportion[temp$PlaqueScore == "AS+"]
+  b = temp$Proportion[temp$PlaqueScore == "AS-"]
+  print(i)
+  print(unique(cellCounts$ClusterNames[cellCounts$res.1.5 == i]))
+  print(t.test(a, b)$p.value)
+  print(wilcox.test(a, b)$p.value)
+}
+p1 = ggplot(cellCounts, aes(PlaqueScore, Proportion)) + geom_point() + facet_wrap(. ~ ClusterNames, scales = "free",  ncol = 4, labeller = labeller(ClusterNames = label_wrap_gen(19))) + theme_pubr(legend = "bottom") + scale_fill_brewer(palette = "Greys") + xlab("Atherosclerosis Status") + ylab("Percentage of Total Sequenced Cells") + stat_summary(fun.y=mean, geom="point", shape=8, size=3, color="red")
+ggsave(plot = p1, filename = "differentially_population_cell_clusters.png",  dpi = 600, width = 8, height = 8)
+
+```
+
+# Identify cell cluster markers for each clusters, then characterize these markers using GSEA, over-representation analysis, and enricher with KEGG gene sets downloaded from MSigDB. 
+
+Please note the gene set file is c2.cp.v6.2.symbols.gmt. Using different gene sets/different gmt will obviously give different p values.
+
+```{r}
+
+require(clusterProfiler)
+require(dplyr)
+require(msigdbr)
+require(scales)
+require(ggpubr)
+all_markers = FindAllMarkers(scRNA2, test.use = "MAST")
+#all_markers = as.data.frame(scRNA2.markers %>% group_by(cluster) %>% filter(p_val_adj < 0.05) %>% filter(abs(avg_logFC) > 1)) %>% top_n(50, avg_logFC) #scRNA2.markers %>% group_by(cluster) %>% top_n(30, avg_logFC)]
+all_markers = as.data.frame(scRNA2.markers %>% group_by(cluster) %>% filter(p_val_adj < 0.05) %>% filter(abs(avg_logFC) > 0.3))
+cibersort_majority = c("0" = "B cells naive - 1", "1" = "T cells CD8 - 1", "2" = "T cells CD4 - 1", "3" = "T cells CD8/CD4/CD4 naive", "4" = "T cells CD8 naive/T cells CD8/ RBCs", "5" = "B cells naive - 2", "6" = "T cells naive", "7" = "T cells CD8 - 2", "8" = "T cells CD8 - 3", "9" = "NK cells resting", "10"  = "T cells CD8 - 4", "11" = "T cells CD8/NK cells resting", "12" = "T cells CD4 memory resting/ T cells CD8", "13" = "B cells memory", "14" = "Monocytes", "15" = "NK cells activated")
+all_markers$ClusterName =  plyr::revalue(x = as.character(all_markers$cluster), replace = cibersort_majority, warn_missing = TRUE)
+write.csv(all_markers,  "all_markers.csv")
+scRNA2@meta.data$cibersort =  plyr::revalue(x = as.character(scRNA2@ident), replace = cibersort_majority, warn_missing = TRUE)
+
+selected_markers_heat = DoHeatmap(scRNA2, genes.use=unique(all_markers$gene[1:50]), slim.col.label = TRUE, draw.line = TRUE, remove.key = FALSE, group.cex = 8, group.spacing = 0.20,cex.row=6, group.label.rot = 45, group.by = "cibersort") #, disp.min = -10, disp.max = 10 #genes.use=unique(all_markers$gene[1:50])
+selected_markers_heat = selected_markers_heat #+ theme_pubr(legend = "right", x.text.angle = 45)
+selected_markers_heat = selected_markers_heat + theme(axis.title.x = element_blank(),
+            axis.text.x = element_blank(), axis.ticks.x = element_blank(),
+            axis.line = element_blank(), axis.title.y = element_blank(),
+            axis.ticks.y = element_blank())
+selected_markers_heat = selected_markers_heat + theme(panel.background = element_rect(fill = "darkblue", color = "darkblue"), panel.grid.major = element_line(color = "white"), strip.background.x = element_rect(fill = "white"), plot.background = element_rect(fill = "white")) + scale_fill_continuous(type = "viridis", name = "Expression") #+ scale_fill_gradient2(low="blue", mid="white",high="red")
+selected_markers_heat = selected_markers_heat + theme(axis.text.y = element_text(size = 8))
+ggsave("markers_heatmap.png", plot=selected_markers_heat, width = 13, height=13, units="in", dpi=600)
+```
+# ORA for cluster 11 (T cells CD8/NK cells resting) and cluster 14 (monocytes)
+
+```{r}
+
+m_t2g = clusterProfiler::read.gmt("c2.cp.v6.2.symbols.gmt")
+kegg_t2g=m_t2g[grepl("KEGG", m_t2g$ont),]
+
+#cluster 11
+geneList = as.vector(all_markers[all_markers$cluster==11,"avg_logFC"])
+names(geneList) = all_markers[all_markers$cluster==11,"gene"]
+geneList = sort(geneList, decreasing = TRUE)
+kegg_ora_cluster11 = as.data.frame(enricher(names(geneList), TERM2GENE = kegg_t2g))
+
+#cluster 14
+geneList = as.vector(all_markers[all_markers$cluster==14,"avg_logFC"])
+names(geneList) = all_markers[all_markers$cluster==14,"gene"]
+geneList = sort(geneList, decreasing = TRUE)
+kegg_ora_cluster14 = as.data.frame(enricher(names(geneList), TERM2GENE = kegg_t2g))
+
+write.csv(kegg_ora_cluster11, "kegg_ora_cluster11.csv")
+write.csv(kegg_ora_cluster14, "kegg_ora_cluster14.csv")
+
+```
+
+# Make publication quality heatmaps of DE genes
+## monocytes
+```{r}
+clusterMarkers = read.csv("cluster_14_ASmarkers.csv", stringsAsFactors = FALSE, row.names = 1)
+clusterMarkers = clusterMarkers[clusterMarkers$cluster == "AS+",]
+DEgenes = clusterMarkers[abs(clusterMarkers$avg_logFC) > 0.3,]
+DEgenes = DEgenes[DEgenes$p_val_adj < 0.1,]
+DEgenes = DEgenes$gene
+tempSeurat = SubsetData(scRNA2, subset.name = "res.1.5", accept.value = 14)
+tempSeurat = SetAllIdent(tempSeurat, id = "PlaqueScore")
+require(ComplexHeatmap)
+require(circlize)
+col_fun = colorRamp2(c(min(tempSeurat@scale.data[DEgenes,]), (max(tempSeurat@scale.data[DEgenes,]) + min(tempSeurat@scale.data[DEgenes,]))/2, max(tempSeurat@scale.data[DEgenes,])), c("#440154", "#21918c", "#fde725")) #viridis = c("#440154", "#21918c", "#fde725")
+Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
+png("cluster_14_DE_genes.png",width=4,height=4,units="in",res=1200)
+Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
+dev.off()
+as.data.frame(enricher(DEgenes, TERM2GENE = kegg_t2g)) #enricher-kegg results
+```
+
+## Cluster 11
+
+```{r}
+clusterMarkers = read.csv("cluster_11_ASmarkers.csv", stringsAsFactors = FALSE, row.names = 1)
+clusterMarkers = clusterMarkers[clusterMarkers$cluster == "AS-",]
+DEgenes = clusterMarkers[abs(clusterMarkers$avg_logFC) > 0.3,]
+DEgenes = DEgenes[DEgenes$p_val_adj < 0.1,]
+DEgenes = DEgenes$gene
+tempSeurat = SubsetData(scRNA2, subset.name = "res.1.5", accept.value = 11)
+tempSeurat = SetAllIdent(tempSeurat, id = "PlaqueScore")
+require(ComplexHeatmap)
+require(circlize)
+col_fun = colorRamp2(c(min(tempSeurat@scale.data[DEgenes,]), (max(tempSeurat@scale.data[DEgenes,]) + min(tempSeurat@scale.data[DEgenes,]))/2, max(tempSeurat@scale.data[DEgenes,])), c("#440154", "#21918c", "#fde725")) #viridis = c("#440154", "#21918c", "#fde725")
+Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
+
+png("cluster11_DE_genes.png",width=4,height=4,units="in",res=1200)
+Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
+dev.off()
+as.data.frame(enricher(DEgenes, TERM2GENE = kegg_t2g))
+```
+## Cluster 0 = "B cells naive - 1"
+
+```{r}
+clusterMarkers = read.csv("cluster_0_ASmarkers.csv", stringsAsFactors = FALSE, row.names = 1)
+clusterMarkers = clusterMarkers[clusterMarkers$cluster == "AS+",]
+DEgenes = clusterMarkers[abs(clusterMarkers$avg_logFC) > 0.3,]
+DEgenes = DEgenes[DEgenes$p_val_adj < 0.1,]
+DEgenes = DEgenes$gene
+tempSeurat = SubsetData(scRNA2, subset.name = "res.1.5", accept.value =0)
+tempSeurat = SetAllIdent(tempSeurat, id = "PlaqueScore") 
+require(ComplexHeatmap)
+require(circlize)
+col_fun = colorRamp2(c(min(tempSeurat@scale.data[DEgenes,]), (max(tempSeurat@scale.data[DEgenes,]) + min(tempSeurat@scale.data[DEgenes,]))/2, max(tempSeurat@scale.data[DEgenes,])), c("#440154", "#21918c", "#fde725")) #viridis = c("#440154", "#21918c", "#fde725")
+Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
+png("cluster0_DE_genes.png",width=4,height=4,units="in",res=1200)
+Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
+dev.off()
+as.data.frame(enricher(DEgenes, TERM2GENE = kegg_t2g))
+```
+
+## Cluster 5 = "B cells naive - 2"
+
+```{r}
+clusterMarkers = read.csv("cluster_5_ASmarkers.csv", stringsAsFactors = FALSE, row.names = 1)
+clusterMarkers = clusterMarkers[clusterMarkers$cluster == "AS+",]
+DEgenes = clusterMarkers[abs(clusterMarkers$avg_logFC) > 0.3,]
+DEgenes = DEgenes[DEgenes$p_val_adj < 0.1,]
+DEgenes = DEgenes$gene
+tempSeurat = SubsetData(scRNA2, subset.name = "res.1.5", accept.value = 5)
+tempSeurat = SetAllIdent(tempSeurat, id = "PlaqueScore")
+require(ComplexHeatmap)
+require(circlize)
+col_fun = colorRamp2(c(min(tempSeurat@scale.data[DEgenes,]), (max(tempSeurat@scale.data[DEgenes,]) + min(tempSeurat@scale.data[DEgenes,]))/2, max(tempSeurat@scale.data[DEgenes,])), c("#440154", "#21918c", "#fde725")) #viridis = c("#440154", "#21918c", "#fde725")
+Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
+png("cluster5_DE_genes.png",width=4,height=4,units="in",res=1200)
+Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
+dev.off()
+```
+
+
+## Cluster 3 = "T cells CD8/CD4/CD4 naive"
+
+```{r}
+clusterMarkers = read.csv("cluster_3_ASmarkers.csv", stringsAsFactors = FALSE, row.names = 1)
+clusterMarkers = clusterMarkers[clusterMarkers$cluster == "AS+",]
+DEgenes = clusterMarkers[abs(clusterMarkers$avg_logFC) > 0.3,]
+DEgenes = DEgenes[DEgenes$p_val_adj < 0.1,]
+DEgenes = DEgenes$gene
+tempSeurat = SubsetData(scRNA2, subset.name = "res.1.5", accept.value = 3)
+tempSeurat = SetAllIdent(tempSeurat, id = "PlaqueScore")
+require(ComplexHeatmap)
+require(circlize)
+col_fun = colorRamp2(c(min(tempSeurat@scale.data[DEgenes,]), (max(tempSeurat@scale.data[DEgenes,]) + min(tempSeurat@scale.data[DEgenes,]))/2, max(tempSeurat@scale.data[DEgenes,])), c("#440154", "#21918c", "#fde725")) #viridis = c("#440154", "#21918c", "#fde725")
+Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
+png("cluster3_DE_genes.png",width=4,height=4,units="in",res=1200)
+Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
+dev.off()
+```
+
+
+
+
+# GSEA and Enricher for AS+ vs AS-, for each subpopulation separately (Lauren). Also modified to do comparison for only scbonita networks
+
+```{r}
+
+temp_kegg = matrix(data=NA, nrow=1, ncol = 10) #only kegg
+temp_gsea = matrix(data=NA, nrow=1, ncol = 12) #all genesets gsea-allgenesets
+colnames(temp_gsea) = c("ID", "Description", "setSize", "enrichmentScore", "NES", "pvalue", "p.adjust", "qvalues" , "rank", "leading_edge", "core_enrichment", "Cluster")
+temp_enricher = matrix(data=NA, nrow=1, ncol = 10) #all genesets
+temp_immsig = matrix(data=NA, nrow=1, ncol = 10) #immunology genesets
+
+bonita_temp_enricher = matrix(data=NA, nrow=1, ncol = 10)
+bonita_temp_gsea = matrix(data=NA, nrow=1, ncol = 12) #all genesets gsea-allgenesets
+colnames(bonita_temp_gsea) = c("ID", "Description", "setSize", "enrichmentScore", "NES", "pvalue", "p.adjust", "qvalues" , "rank", "leading_edge", "core_enrichment", "Cluster")
+
+for (cluster in 0:15){
+  tempSeurat = SubsetData(scRNA2, subset.name = "res.1.5", accept.value = cluster)
+  tempSeurat = SetAllIdent(tempSeurat, id = "PlaqueScore")
+  temp_markers = FindAllMarkers(tempSeurat, test.use = "wilcox", only.pos = FALSE)
+  temp_markers = as.data.frame(temp_markers)#  %>% filter(p_val_adj < 0.05) %>% filter(abs(avg_logFC) > 0.25))
+  geneList = as.vector(temp_markers[,"avg_logFC"])
+  names(geneList) = temp_markers[,"gene"]
+  geneList = sort(geneList, decreasing = TRUE)
+  
+  if (length(geneList) > 0){
+  kegg_ora = as.data.frame(enricher(names(geneList), TERM2GENE = kegg_t2g)) #enricher-kegg results
+  all_ora = as.data.frame(enricher(names(geneList), TERM2GENE = m_t2g))
+  gsea_results = as.data.frame(GSEA(geneList, TERM2GENE = m_t2g)) #gsea-allgenesets)
+  immsig_ora = as.data.frame(enricher(names(geneList), TERM2GENE = imm_t2g)) #enricher-immsig results
+  
+  if (any(names(geneList) %in% bonita_t2g$gene)){
+    bonita_ora = as.data.frame(enricher(names(geneList), TERM2GENE = bonita_t2g))
+    bonita_gsea =  as.data.frame(GSEA(geneList, TERM2GENE = bonita_t2g))
+  
+  } else{
+    bonita_ora = as.data.frame(matrix(data=NA, nrow=1, ncol = 10))
+    bonita_gsea = as.data.frame(matrix(data=NA, nrow=1, ncol = 12))
+  }
+    #enricher-kegg results
+  if (nrow(kegg_ora) >= 1){
+    kegg_ora$Cluster = cluster
+    colnames(temp_kegg) = colnames(kegg_ora)
+    temp_kegg = rbind(temp_kegg, kegg_ora)
+  } else{
+    kegg_ora = matrix(data=NA, nrow=1, ncol = 10)
+    colnames(kegg_ora) = c("ID","Description","GeneRatio","BgRatio","pvalue","p.adjust","qvalue","geneID","Count","Cluster")
+    kegg_ora["Cluster"] = cluster
+    temp_kegg = rbind(temp_kegg, kegg_ora)
+  }
+    if (nrow(immsig_ora) >= 1){
+    immsig_ora$Cluster = cluster
+    colnames(temp_immsig) = colnames(immsig_ora)
+    temp_immsig = rbind(temp_immsig, immsig_ora)
+  } else{
+    immsig_ora = matrix(data=NA, nrow=1, ncol = 10)
+    colnames(immsig_ora) = c("ID","Description","GeneRatio","BgRatio","pvalue","p.adjust","qvalue","geneID","Count","Cluster")
+    immsig_ora["Cluster"] = cluster
+    temp_immsig = rbind(temp_immsig, immsig_ora)
+  }
+    if (nrow(all_ora) >= 1){
+    all_ora$Cluster = cluster
+    colnames(temp_enricher) = colnames(all_ora)
+    temp_enricher = rbind(temp_enricher, all_ora)
+  } else{
+    all_ora = matrix(data=NA, nrow=1, ncol = 10)
+    colnames(all_ora) = c("ID","Description","GeneRatio","BgRatio","pvalue","p.adjust","qvalue","geneID","Count","Cluster")
+    all_ora["Cluster"] = cluster
+    temp_enricher = rbind(temp_enricher, all_ora)
+  }
+  if (nrow(bonita_ora) >= 1){
+    bonita_ora$Cluster = cluster
+    colnames(bonita_temp_enricher) = colnames(bonita_ora)
+    bonita_temp_enricher = rbind(bonita_temp_enricher, bonita_ora)
+  } else{
+    bonita_ora = matrix(data=NA, nrow=1, ncol = 10)
+    colnames(bonita_ora) = c("ID","Description","GeneRatio","BgRatio","pvalue","p.adjust","qvalue","geneID","Count","Cluster")
+    bonita_ora["Cluster"] = cluster
+    bonita_temp_enricher = rbind(bonita_temp_enricher, bonita_ora)
+  }
+  #gsea-allgenesets
+    if (nrow(gsea_results) >= 1){
+    gsea_results$Cluster = cluster
+    colnames(temp_gsea) = colnames(gsea_results)
+    temp_gsea = rbind(temp_gsea, gsea_results)
+  } else{
+    gsea_results = as.data.frame(matrix(data=NA, nrow=1, ncol = 12))
+    colnames(gsea_results) = c("ID", "Description", "setSize", "enrichmentScore", "NES", "pvalue", "p.adjust", "qvalues" , "rank", "leading_edge", "core_enrichment", "Cluster")
+    gsea_results["Cluster"] = cluster
+    temp_gsea = rbind(temp_gsea, gsea_results, make.row.names=FALSE)
+  }
+      if (nrow(bonita_gsea) >= 1){
+   bonita_gsea$Cluster = cluster
+    colnames(bonita_temp_gsea) = colnames(bonita_gsea)
+    bonita_temp_gsea = rbind(bonita_temp_gsea, bonita_gsea)
+  } else{
+    bonita_gsea = as.data.frame(matrix(data=NA, nrow=1, ncol = 12))
+    colnames(bonita_gsea) = c("ID", "Description", "setSize", "enrichmentScore", "NES", "pvalue", "p.adjust", "qvalues" , "rank", "leading_edge", "core_enrichment", "Cluster")
+    bonita_gsea["Cluster"] = cluster
+    bonita_temp_gsea = rbind(bonita_temp_gsea, bonita_gsea, make.row.names=FALSE)
+  }
+  }
+}
+
+#Write out excel sheets
+OUT = createWorkbook()
+
+#Compile enricher-kegg results
+pa_results = na.omit(temp_kegg)
+cibersort_majority = c("0" = "B cells naive - 1", "1" = "T cells CD8 - 1", "2" = "T cells CD4 - 1", "3" = "T cells CD8/CD4/CD4 naive", "4" = "T cells CD8 naive/T cells CD8/ RBCs", "5" = "B cells naive - 2", "6" = "T cells naive", "7" = "T cells CD8 - 2", "8" = "T cells CD8 - 3", "9" = "NK cells resting", "10"  = "T cells CD8 - 4", "11" = "T cells CD8/NK cells resting", "12" = "T cells CD4 memory resting/ T cells CD8", "13" = "B cells memory", "14" = "Monocytes", "15" = "NK cells activated")
+pa_results$ClusterNames =  plyr::revalue(x = as.character(pa_results$Cluster), replace = cibersort_majority, warn_missing = TRUE)
+pa_results$log10_pvals=(-1)*(log10(as.numeric(pa_results[, "pvalue"])))
+addWorksheet(OUT, "enricher-kegg")
+writeData(OUT, pa_results, sheet = "enricher-kegg")
+
+#Compile enricher-immsig results
+pa_results = na.omit(temp_immsig)
+cibersort_majority = c("0" = "B cells naive - 1", "1" = "T cells CD8 - 1", "2" = "T cells CD4 - 1", "3" = "T cells CD8/CD4/CD4 naive", "4" = "T cells CD8 naive/T cells CD8/ RBCs", "5" = "B cells naive - 2", "6" = "T cells naive", "7" = "T cells CD8 - 2", "8" = "T cells CD8 - 3", "9" = "NK cells resting", "10"  = "T cells CD8 - 4", "11" = "T cells CD8/NK cells resting", "12" = "T cells CD4 memory resting/ T cells CD8", "13" = "B cells memory", "14" = "Monocytes", "15" = "NK cells activated")
+pa_results$ClusterNames =  plyr::revalue(x = as.character(pa_results$Cluster), replace = cibersort_majority, warn_missing = TRUE)
+pa_results$log10_pvals=(-1)*(log10(as.numeric(pa_results[, "pvalue"])))
+addWorksheet(OUT, "enricher-immsig")
+writeData(OUT, pa_results, sheet = "enricher-immsig")
+
+#Compile enricher-allgenesets results
+enricher_results = na.omit(temp_enricher)
+enricher_results$ClusterNames =  plyr::revalue(x = as.character(enricher_results$Cluster), replace = cibersort_majority, warn_missing = TRUE)
+enricher_results$log10_pvals=(-1)*(log10(as.numeric(enricher_results[, "pvalue"])))
+addWorksheet(OUT, "enricher- all gene sets")
+writeData(OUT, enricher_results, sheet = "enricher- all gene sets")
+
+#Compile gsea-allgenesets results
+gsea_results = na.omit(temp_gsea)
+gsea_results$ClusterNames =  plyr::revalue(x = as.character(gsea_results$Cluster), replace = cibersort_majority, warn_missing = TRUE)
+gsea_results$log10_pvals=(-1)*(log10(as.numeric(gsea_results[, "pvalue"])))
+addWorksheet(OUT, "gsea - all gene sets")
+writeData(OUT, gsea_results, sheet = "gsea - all gene sets")
+
+
+saveWorkbook(OUT, "enrichment_ASposvsASneg_by_subpopulation.xlsx", overwrite = TRUE)
+
+```
+
+
+# Publication quality TSNE plot
+
+```{r}
+# For "majority" cell types, identified by looking at bar plot - I have requested the package source code to generate better figures.
+cibersort_majority = c("0" = "B cells naive - 1", "1" = "T cells CD8 - 1", "2" = "T cells CD4 - 1", "3" = "T cells CD8/CD4/CD4 naive", "4" = "T cells CD8 naive/T cells CD8/ RBCs", "5" = "B cells naive - 2", "6" = "T cells naive", "7" = "T cells CD8 - 2", "8" = "T cells CD8 - 3", "9" = "NK cells resting", "10"  = "T cells CD8 - 4", "11" = "T cells CD8/NK cells resting", "12" = "T cells CD4 memory resting/ T cells CD8", "13" = "B cells memory", "14" = "Monocytes", "15" = "NK cells activated")
+scRNA2@meta.data[, "ClusterIDs_CIBERSORT_majority"] = plyr::revalue(x = scRNA2@meta.data[,"res.1.5"], replace = cibersort_majority, warn_missing = TRUE)
+scRNA2 = RunTSNE(scRNA2, reduction.use = "pca", dims.use = 1:10)
+scRNA2 = SetAllIdent(scRNA2, id = "ClusterIDs_CIBERSORT_majority")
+
+```
+```{r}
+col.dist = function(inp, comp) sum( abs(inp - col2rgb(comp) ) )
+tsneColors = c(colors()[apply(col2rgb(brewer.pal("Paired", n = 12)), 2, function(z) which.min(sapply(colors(), function(x) col.dist(inp=z, comp=x))))], "dodgerblue4", "black", "red", "yellow")
+#c("skyblue", "dodgerblue", "navy", "black", "lightgreen", "darkgreen", "wheat", "tan", brewer.pal(7, "Purples")[1:7], "orange",)
+# colors.use = c(brewer.pal(3, "Blues"), "black", "lightgreen", "darkgreen", brewer.pal(3, "Oranges"), brewer.pal(7, "Purples"))) #tsneColors)
+tsne_public = TSNEPlot(object = scRNA2, pt.size=1, do.label = TRUE, plot.title = "", return = TRUE, no.legend=FALSE, colors.use = c(brewer.pal(4, "Blues")[2:4], "black", "lightgreen", "darkgreen", brewer.pal(5,"Oranges")[3:5], brewer.pal(9, "Purples")[3:9], "orange"))
+svg("ClusterIDs_CIBERSORT_majority.svg", width = 10, height = 10)
+tsne_public 
+dev.off()
+tsne_public = TSNEPlot(object = scRNA2, pt.size=1, do.label = FALSE, plot.title = "", return = TRUE, no.legend=TRUE, colors.use = c(brewer.pal(4, "Blues")[2:4], "black", "lightgreen", "darkgreen", brewer.pal(5,"Oranges")[3:5], brewer.pal(9, "Purples")[3:9], "orange"))
+svg("ClusterIDs_CIBERSORT_majority_withoutLabels.svg", width = 10, height = 10)
+tsne_public 
+dev.off()
+```
+
+
+# Get cluster centroids of all clusters (for Lauren)
+
+```{r, eval=FALSE}
+
+getClusterCentroids = function(cluster, seuratObject){
+  cells_in_cluster = colnames(seuratObject@data)[colnames(seuratObject@data) %in% na.omit(names(seuratObject@ident[seuratObject@ident == cluster]))]
+  #data_in_cluster = seuratObject@data[,cells_in_cluster]d
+  data_in_cluster = GetDimReduction(seuratObject, "pca", "cell.embeddings")[cells_in_cluster,1:10]
+  #print(head(data_in_cluster))
+  #return(sum(data_in_cluster))
+  #return(cells_in_cluster)
+  return(colMeans(data_in_cluster))
+}
+
+res=1.5
+clusterCentroids = vector(mode = "list", length = length(unique(scRNA2@meta.data[,paste0("res.", res)])))# set up vector of cluster centroids
+names(clusterCentroids) = unique(scRNA2@ident)
+for (cluster in names(clusterCentroids)) {
+  a = getClusterCentroids(cluster = cluster, scRNA2)#find the centroid of each cluster
+  a["res.1.5"] = unique(scRNA2@meta.data$res.1.5[scRNA2@meta.data$ClusterIDs_CIBERSORT_majority == cluster])
+  a["clusterNumbers"] = as.integer(a["res.1.5"]) + 1
+  clusterCentroids[[cluster]] = a
+  
+}
+
+print(clusterCentroids)
+
+all_cells = rownames(scRNA2@meta.data)
+dimreducdata = GetDimReduction(scRNA2, "pca", "cell.embeddings")[,1:10]
+scRNA2@meta.data$dist_to_assignedCluster = NULL
+
+for (cell in all_cells) {
+  cell_data = t(dimreducdata[cell, ])
+  cluster = as.vector(scRNA2@ident[cell])
+  centroid = setdiff(clusterCentroids[[1]], clusterCentroids[[1]][c("res.1.5", "clusterNumbers")]) #clusterCentroids[[cluster]] #centroids of clusters at current resolution
+  euc_dist = as.vector(dist(as.matrix(rbind(
+  cell_data, centroid
+  )), method = "euclidean"))
+  scRNA2@meta.data[cell, "dist_to_assignedCluster"] = euc_dist
+}
+
+scRNA2@meta.data$clusterNumbers = as.numeric(scRNA2@meta.data$res.1.5) + 1
+
+write.csv(file = "distance_to_cluster_centroid.csv", x = scRNA2@meta.data[,c("res.1.5", "clusterNumbers",  "ClusterIDs_CIBERSORT_majority","dist_to_assignedCluster")])
+
+write.csv(t(as.data.frame(clusterCentroids)), file="cluster_centroids.csv")
+
+write.csv(x = dimreducdata, file = "cell_embeddings.csv")
+```
+
+
+
+
+
+
+
