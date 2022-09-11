@@ -20,7 +20,7 @@ __Link to dataset: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE198339_
 
 ## Analysis summary:
 
-** See the R notebook HIV_AS_dataset_analysis.rmd for code and all parameters** 
+### See the R notebook HIV_AS_dataset_analysis.rmd for code and all parameters
 
 - Initialize Seurat object with raw counts and metadata (ie, clinical covariates). 
 - Perform basic filtering and quality control, followed by dimensionality reduction and clustering. 
