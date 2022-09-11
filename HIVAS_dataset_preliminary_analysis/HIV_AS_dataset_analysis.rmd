@@ -26,7 +26,7 @@ require(circlize)
 require(knitr)
 require(openxlsx)
 require(dplyr)
-
+require(plyr)
 
 #setwd("") # you should update this appropriately
 
@@ -117,7 +117,7 @@ scRNA <- AddMetaData(object = scRNA,
 
 patient_data = read.csv("HIVAS_participants_clinical_covariates.csv")
 patient_data$ParticipantId <- trimws(patient_data$ParticipantId)
-head(patient_data)
+kable(head(patient_data))
 patient_data$PlaqueScore = as.numeric(patient_data$PlaqueScore)
 patient_data$PlaqueScore = unlist(lapply(patient_data$PlaqueScore, function(x) {
   if (x == 2) {
@@ -167,7 +167,7 @@ scRNA <- AddMetaData(object = scRNA,
                      metadata = PlaqueScore,
                      col.name = "PlaqueScore")
 
-head(scRNA@meta.data)
+kable(head(scRNA@meta.data))
 slotNames(scRNA)
 table(scRNA@meta.data$orig.ident)
 
@@ -187,6 +187,8 @@ svg("before_filtering.svg", height = 4)
 boxplot(metadata$Number.of.cells ~ metadata$PlaqueScore,
         col = as.vector(wes_palette(name = "Darjeeling1"))[c(3, 5)])
 dev.off()
+boxplot(metadata$Number.of.cells ~ metadata$PlaqueScore,
+        col = as.vector(wes_palette(name = "Darjeeling1"))[c(3, 5)])
 mito.genes <-
   grep(pattern = "^MT-",
        x = rownames(x = scRNA@data),
@@ -557,7 +559,7 @@ scRNA2.markers = invisible(FindAllMarkers(
 
 # Optional save/reload step
 
-```{r, eval=FALSE}
+```{r, eval=TRUE}
 save(scRNA2, scRNA2.markers, file="scRNA2_and_markers.RData") # save dataset
 load("scRNA2_and_markers.RData")
 
@@ -648,14 +650,15 @@ for (i in levels(as.factor(cellCounts$res.1.5))){
   temp = cellCounts[cellCounts$res.1.5 == i,]
   a = temp$Proportion[temp$PlaqueScore == "AS+"]
   b = temp$Proportion[temp$PlaqueScore == "AS-"]
-  print(i)
-  print(unique(cellCounts$ClusterNames[cellCounts$res.1.5 == i]))
-  print(t.test(a, b)$p.value)
-  print(wilcox.test(a, b)$p.value)
+  print(c("Cluster Number: ", i))
+  print(c("Cluster Name: ", unique(cellCounts$ClusterNames[cellCounts$res.1.5 == i])))
+  print(c("Pvalue, t-test: ", t.test(a, b)$p.value))
+  print(c("Pvalue, wilcox: ", wilcox.test(a, b)$p.value))
+  print("****")
 }
 p1 = ggplot(cellCounts, aes(PlaqueScore, Proportion)) + geom_point() + facet_wrap(. ~ ClusterNames, scales = "free",  ncol = 4, labeller = labeller(ClusterNames = label_wrap_gen(19))) + theme_pubr(legend = "bottom") + scale_fill_brewer(palette = "Greys") + xlab("Atherosclerosis Status") + ylab("Percentage of Total Sequenced Cells") + stat_summary(fun.y=mean, geom="point", shape=8, size=3, color="red")
 ggsave(plot = p1, filename = "differentially_population_cell_clusters.png",  dpi = 600, width = 8, height = 8)
-
+p1
 ```
 
 # Identify cell cluster markers for each clusters, then characterize these markers using GSEA, over-representation analysis, and enricher with KEGG gene sets downloaded from MSigDB. 
@@ -663,7 +666,7 @@ ggsave(plot = p1, filename = "differentially_population_cell_clusters.png",  dpi
 Please note the gene set file is c2.cp.v6.2.symbols.gmt. Using different gene sets/different gmt will obviously give different p values.
 
 ```{r}
-
+scRNA2.markers$cluster = unlist(lapply(scRNA2.markers$cluster, function(x){return(as.numeric(unique(scRNA2@meta.data$res.1.5[scRNA2@meta.data$ClusterName==x])))}))
 all_markers = as.data.frame(scRNA2.markers %>% group_by(cluster) %>% filter(p_val_adj < 0.05) %>% filter(abs(avg_logFC) > 0.3))
 cibersort_majority = c("0" = "B cells naive - 1", "1" = "T cells CD8 - 1", "2" = "T cells CD4 - 1", "3" = "T cells CD8/CD4/CD4 naive", "4" = "T cells CD8 naive/T cells CD8/ RBCs", "5" = "B cells naive - 2", "6" = "T cells naive", "7" = "T cells CD8 - 2", "8" = "T cells CD8 - 3", "9" = "NK cells resting", "10"  = "T cells CD8 - 4", "11" = "T cells CD8/NK cells resting", "12" = "T cells CD4 memory resting/ T cells CD8", "13" = "B cells memory", "14" = "Monocytes", "15" = "NK cells activated")
 all_markers$ClusterName =  plyr::revalue(x = as.character(all_markers$cluster), replace = cibersort_majority, warn_missing = TRUE)
@@ -679,6 +682,7 @@ selected_markers_heat = selected_markers_heat + theme(axis.title.x = element_bla
 selected_markers_heat = selected_markers_heat + theme(panel.background = element_rect(fill = "darkblue", color = "darkblue"), panel.grid.major = element_line(color = "white"), strip.background.x = element_rect(fill = "white"), plot.background = element_rect(fill = "white")) + scale_fill_continuous(type = "viridis", name = "Expression") #+ scale_fill_gradient2(low="blue", mid="white",high="red")
 selected_markers_heat = selected_markers_heat + theme(axis.text.y = element_text(size = 8))
 ggsave("markers_heatmap.png", plot=selected_markers_heat, width = 13, height=13, units="in", dpi=600)
+selected_markers_heat
 ```
 # ORA for cluster 11 (T cells CD8/NK cells resting) and cluster 14 (monocytes)
 
@@ -694,11 +698,15 @@ names(geneList) = all_markers[all_markers$cluster==11,"gene"]
 geneList = sort(geneList, decreasing = TRUE)
 kegg_ora_cluster11 = as.data.frame(enricher(names(geneList), TERM2GENE = kegg_t2g))
 
+kable(head(kegg_ora_cluster11))
+
 #cluster 14
 geneList = as.vector(all_markers[all_markers$cluster==14,"avg_logFC"])
 names(geneList) = all_markers[all_markers$cluster==14,"gene"]
 geneList = sort(geneList, decreasing = TRUE)
 kegg_ora_cluster14 = as.data.frame(enricher(names(geneList), TERM2GENE = kegg_t2g))
+
+kable(head(kegg_ora_cluster14))
 
 write.csv(kegg_ora_cluster11, "kegg_ora_cluster11.csv")
 write.csv(kegg_ora_cluster14, "kegg_ora_cluster14.csv")
@@ -732,7 +740,7 @@ for (cluster in 0:15){
   geneList = sort(geneList, decreasing = TRUE)
   
   if (length(geneList) > 0){
-  write.csv(temp_markers, paste0("cluster_",str(cluster),"_ASmarkers.csv"))
+  write.csv(temp_markers, paste0("cluster_",as.character(cluster),"_ASmarkers.csv"))
   kegg_ora = as.data.frame(enricher(names(geneList), TERM2GENE = kegg_t2g)) #enricher-kegg results
   all_ora = as.data.frame(enricher(names(geneList), TERM2GENE = m_t2g))
   gsea_results = as.data.frame(GSEA(geneList, TERM2GENE = m_t2g)) #gsea-allgenesets)
@@ -821,6 +829,7 @@ pa_results$ClusterNames =  plyr::revalue(x = as.character(pa_results$Cluster), r
 pa_results$log10_pvals=(-1)*(log10(as.numeric(pa_results[, "pvalue"])))
 addWorksheet(OUT, "enricher-kegg")
 writeData(OUT, pa_results, sheet = "enricher-kegg")
+kable(pa_results)
 
 #Compile enricher-immsig results
 pa_results = na.omit(temp_immsig)
@@ -829,6 +838,7 @@ pa_results$ClusterNames =  plyr::revalue(x = as.character(pa_results$Cluster), r
 pa_results$log10_pvals=(-1)*(log10(as.numeric(pa_results[, "pvalue"])))
 addWorksheet(OUT, "enricher-immsig")
 writeData(OUT, pa_results, sheet = "enricher-immsig")
+kable(pa_results)
 
 #Compile enricher-allgenesets results
 enricher_results = na.omit(temp_enricher)
@@ -836,6 +846,7 @@ enricher_results$ClusterNames =  plyr::revalue(x = as.character(enricher_results
 enricher_results$log10_pvals=(-1)*(log10(as.numeric(enricher_results[, "pvalue"])))
 addWorksheet(OUT, "enricher- all gene sets")
 writeData(OUT, enricher_results, sheet = "enricher- all gene sets")
+kable(enricher_results)
 
 #Compile gsea-allgenesets results
 gsea_results = na.omit(temp_gsea)
@@ -849,11 +860,102 @@ saveWorkbook(OUT, "enrichment_ASposvsASneg_by_subpopulation.xlsx", overwrite = T
 
 ```
 
+# Make publication quality heatmaps of DE genes
+## monocytes
+
+```{r}
+clusterMarkers = read.csv("cluster_14_ASmarkers.csv", stringsAsFactors = FALSE, row.names = 1)
+clusterMarkers = clusterMarkers[clusterMarkers$cluster == "AS+",]
+DEgenes = clusterMarkers[abs(clusterMarkers$avg_logFC) > 0.3,]
+DEgenes = DEgenes[DEgenes$p_val_adj < 0.1,]
+DEgenes = DEgenes$gene
+tempSeurat = SubsetData(scRNA2, subset.name = "res.1.5", accept.value = 14)
+tempSeurat = SetAllIdent(tempSeurat, id = "PlaqueScore")
+col_fun = colorRamp2(c(min(tempSeurat@scale.data[DEgenes,]), (max(tempSeurat@scale.data[DEgenes,]) + min(tempSeurat@scale.data[DEgenes,]))/2, max(tempSeurat@scale.data[DEgenes,])), c("#440154", "#21918c", "#fde725")) #viridis = c("#440154", "#21918c", "#fde725")
+Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
+png("cluster_14_DE_genes.png",width=4,height=4,units="in",res=1200)
+Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
+dev.off()
+
+kable(as.data.frame(enricher(DEgenes, TERM2GENE = kegg_t2g))) #enricher-kegg results
+```
+
+## Cluster 11
+
+```{r}
+clusterMarkers = read.csv("cluster_11_ASmarkers.csv", stringsAsFactors = FALSE, row.names = 1)
+clusterMarkers = clusterMarkers[clusterMarkers$cluster == "AS-",]
+DEgenes = clusterMarkers[abs(clusterMarkers$avg_logFC) > 0.3,]
+DEgenes = DEgenes[DEgenes$p_val_adj < 0.1,]
+DEgenes = DEgenes$gene
+tempSeurat = SubsetData(scRNA2, subset.name = "res.1.5", accept.value = 11)
+tempSeurat = SetAllIdent(tempSeurat, id = "PlaqueScore")
+col_fun = colorRamp2(c(min(tempSeurat@scale.data[DEgenes,]), (max(tempSeurat@scale.data[DEgenes,]) + min(tempSeurat@scale.data[DEgenes,]))/2, max(tempSeurat@scale.data[DEgenes,])), c("#440154", "#21918c", "#fde725")) #viridis = c("#440154", "#21918c", "#fde725")
+Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
+
+png("cluster11_DE_genes.png",width=4,height=4,units="in",res=1200)
+Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
+dev.off()
+as.data.frame(enricher(DEgenes, TERM2GENE = kegg_t2g))
+```
+## Cluster 0 = "B cells naive - 1"
+
+```{r}
+clusterMarkers = read.csv("cluster_0_ASmarkers.csv", stringsAsFactors = FALSE, row.names = 1)
+clusterMarkers = clusterMarkers[clusterMarkers$cluster == "AS+",]
+DEgenes = clusterMarkers[abs(clusterMarkers$avg_logFC) > 0.3,]
+DEgenes = DEgenes[DEgenes$p_val_adj < 0.1,]
+DEgenes = DEgenes$gene
+tempSeurat = SubsetData(scRNA2, subset.name = "res.1.5", accept.value =0)
+tempSeurat = SetAllIdent(tempSeurat, id = "PlaqueScore")
+col_fun = colorRamp2(c(min(tempSeurat@scale.data[DEgenes,]), (max(tempSeurat@scale.data[DEgenes,]) + min(tempSeurat@scale.data[DEgenes,]))/2, max(tempSeurat@scale.data[DEgenes,])), c("#440154", "#21918c", "#fde725")) #viridis = c("#440154", "#21918c", "#fde725")
+Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
+png("cluster0_DE_genes.png",width=4,height=4,units="in",res=1200)
+Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
+dev.off()
+as.data.frame(enricher(DEgenes, TERM2GENE = kegg_t2g))
+```
+
+## Cluster 5 = "B cells naive - 2"
+
+```{r}
+clusterMarkers = read.csv("cluster_5_ASmarkers.csv", stringsAsFactors = FALSE, row.names = 1)
+clusterMarkers = clusterMarkers[clusterMarkers$cluster == "AS+",]
+DEgenes = clusterMarkers[abs(clusterMarkers$avg_logFC) > 0.3,]
+DEgenes = DEgenes[DEgenes$p_val_adj < 0.1,]
+DEgenes = DEgenes$gene
+tempSeurat = SubsetData(scRNA2, subset.name = "res.1.5", accept.value = 5)
+tempSeurat = SetAllIdent(tempSeurat, id = "PlaqueScore")
+col_fun = colorRamp2(c(min(tempSeurat@scale.data[DEgenes,]), (max(tempSeurat@scale.data[DEgenes,]) + min(tempSeurat@scale.data[DEgenes,]))/2, max(tempSeurat@scale.data[DEgenes,])), c("#440154", "#21918c", "#fde725")) #viridis = c("#440154", "#21918c", "#fde725")
+Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
+png("cluster5_DE_genes.png",width=4,height=4,units="in",res=1200)
+Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
+dev.off()
+```
+
+
+## Cluster 3 = "T cells CD8/CD4/CD4 naive"
+
+```{r}
+clusterMarkers = read.csv("cluster_3_ASmarkers.csv", stringsAsFactors = FALSE, row.names = 1)
+clusterMarkers = clusterMarkers[clusterMarkers$cluster == "AS+",]
+DEgenes = clusterMarkers[abs(clusterMarkers$avg_logFC) > 0.3,]
+DEgenes = DEgenes[DEgenes$p_val_adj < 0.1,]
+DEgenes = DEgenes$gene
+tempSeurat = SubsetData(scRNA2, subset.name = "res.1.5", accept.value = 3)
+tempSeurat = SetAllIdent(tempSeurat, id = "PlaqueScore")
+col_fun = colorRamp2(c(min(tempSeurat@scale.data[DEgenes,]), (max(tempSeurat@scale.data[DEgenes,]) + min(tempSeurat@scale.data[DEgenes,]))/2, max(tempSeurat@scale.data[DEgenes,])), c("#440154", "#21918c", "#fde725")) #viridis = c("#440154", "#21918c", "#fde725")
+Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
+png("cluster3_DE_genes.png",width=4,height=4,units="in",res=1200)
+Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
+dev.off()
+```
+
 
 # Publication quality TSNE plot
 
 ```{r}
-# For "majority" cell types, identified by looking at bar plot - I have requested the package source code to generate better figures.
+# For "majority" cell types, identified by looking at output and bar plot from CIBERSORT
 cibersort_majority = c("0" = "B cells naive - 1", "1" = "T cells CD8 - 1", "2" = "T cells CD4 - 1", "3" = "T cells CD8/CD4/CD4 naive", "4" = "T cells CD8 naive/T cells CD8/ RBCs", "5" = "B cells naive - 2", "6" = "T cells naive", "7" = "T cells CD8 - 2", "8" = "T cells CD8 - 3", "9" = "NK cells resting", "10"  = "T cells CD8 - 4", "11" = "T cells CD8/NK cells resting", "12" = "T cells CD4 memory resting/ T cells CD8", "13" = "B cells memory", "14" = "Monocytes", "15" = "NK cells activated")
 scRNA2@meta.data[, "ClusterIDs_CIBERSORT_majority"] = plyr::revalue(x = scRNA2@meta.data[,"res.1.5"], replace = cibersort_majority, warn_missing = TRUE)
 scRNA2 = RunTSNE(scRNA2, reduction.use = "pca", dims.use = 1:10)
@@ -927,95 +1029,7 @@ write.csv(x = dimreducdata, file = "cell_embeddings.csv")
 ```
 
 
-# Make publication quality heatmaps of DE genes
-## monocytes
 
-```{r}
-clusterMarkers = read.csv("cluster_14_ASmarkers.csv", stringsAsFactors = FALSE, row.names = 1)
-clusterMarkers = clusterMarkers[clusterMarkers$cluster == "AS+",]
-DEgenes = clusterMarkers[abs(clusterMarkers$avg_logFC) > 0.3,]
-DEgenes = DEgenes[DEgenes$p_val_adj < 0.1,]
-DEgenes = DEgenes$gene
-tempSeurat = SubsetData(scRNA2, subset.name = "res.1.5", accept.value = 14)
-tempSeurat = SetAllIdent(tempSeurat, id = "PlaqueScore")
-col_fun = colorRamp2(c(min(tempSeurat@scale.data[DEgenes,]), (max(tempSeurat@scale.data[DEgenes,]) + min(tempSeurat@scale.data[DEgenes,]))/2, max(tempSeurat@scale.data[DEgenes,])), c("#440154", "#21918c", "#fde725")) #viridis = c("#440154", "#21918c", "#fde725")
-Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
-png("cluster_14_DE_genes.png",width=4,height=4,units="in",res=1200)
-Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
-dev.off()
-as.data.frame(enricher(DEgenes, TERM2GENE = kegg_t2g)) #enricher-kegg results
-```
-
-## Cluster 11
-
-```{r}
-clusterMarkers = read.csv("cluster_11_ASmarkers.csv", stringsAsFactors = FALSE, row.names = 1)
-clusterMarkers = clusterMarkers[clusterMarkers$cluster == "AS-",]
-DEgenes = clusterMarkers[abs(clusterMarkers$avg_logFC) > 0.3,]
-DEgenes = DEgenes[DEgenes$p_val_adj < 0.1,]
-DEgenes = DEgenes$gene
-tempSeurat = SubsetData(scRNA2, subset.name = "res.1.5", accept.value = 11)
-tempSeurat = SetAllIdent(tempSeurat, id = "PlaqueScore")
-col_fun = colorRamp2(c(min(tempSeurat@scale.data[DEgenes,]), (max(tempSeurat@scale.data[DEgenes,]) + min(tempSeurat@scale.data[DEgenes,]))/2, max(tempSeurat@scale.data[DEgenes,])), c("#440154", "#21918c", "#fde725")) #viridis = c("#440154", "#21918c", "#fde725")
-Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
-
-png("cluster11_DE_genes.png",width=4,height=4,units="in",res=1200)
-Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
-dev.off()
-as.data.frame(enricher(DEgenes, TERM2GENE = kegg_t2g))
-```
-## Cluster 0 = "B cells naive - 1"
-
-```{r}
-clusterMarkers = read.csv("cluster_0_ASmarkers.csv", stringsAsFactors = FALSE, row.names = 1)
-clusterMarkers = clusterMarkers[clusterMarkers$cluster == "AS+",]
-DEgenes = clusterMarkers[abs(clusterMarkers$avg_logFC) > 0.3,]
-DEgenes = DEgenes[DEgenes$p_val_adj < 0.1,]
-DEgenes = DEgenes$gene
-tempSeurat = SubsetData(scRNA2, subset.name = "res.1.5", accept.value =0)
-tempSeurat = SetAllIdent(tempSeurat, id = "PlaqueScore")
-col_fun = colorRamp2(c(min(tempSeurat@scale.data[DEgenes,]), (max(tempSeurat@scale.data[DEgenes,]) + min(tempSeurat@scale.data[DEgenes,]))/2, max(tempSeurat@scale.data[DEgenes,])), c("#440154", "#21918c", "#fde725")) #viridis = c("#440154", "#21918c", "#fde725")
-Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
-png("cluster0_DE_genes.png",width=4,height=4,units="in",res=1200)
-Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
-dev.off()
-as.data.frame(enricher(DEgenes, TERM2GENE = kegg_t2g))
-```
-
-## Cluster 5 = "B cells naive - 2"
-
-```{r}
-clusterMarkers = read.csv("cluster_5_ASmarkers.csv", stringsAsFactors = FALSE, row.names = 1)
-clusterMarkers = clusterMarkers[clusterMarkers$cluster == "AS+",]
-DEgenes = clusterMarkers[abs(clusterMarkers$avg_logFC) > 0.3,]
-DEgenes = DEgenes[DEgenes$p_val_adj < 0.1,]
-DEgenes = DEgenes$gene
-tempSeurat = SubsetData(scRNA2, subset.name = "res.1.5", accept.value = 5)
-tempSeurat = SetAllIdent(tempSeurat, id = "PlaqueScore")
-col_fun = colorRamp2(c(min(tempSeurat@scale.data[DEgenes,]), (max(tempSeurat@scale.data[DEgenes,]) + min(tempSeurat@scale.data[DEgenes,]))/2, max(tempSeurat@scale.data[DEgenes,])), c("#440154", "#21918c", "#fde725")) #viridis = c("#440154", "#21918c", "#fde725")
-Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
-png("cluster5_DE_genes.png",width=4,height=4,units="in",res=1200)
-Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
-dev.off()
-```
-
-
-## Cluster 3 = "T cells CD8/CD4/CD4 naive"
-
-```{r}
-clusterMarkers = read.csv("cluster_3_ASmarkers.csv", stringsAsFactors = FALSE, row.names = 1)
-clusterMarkers = clusterMarkers[clusterMarkers$cluster == "AS+",]
-DEgenes = clusterMarkers[abs(clusterMarkers$avg_logFC) > 0.3,]
-DEgenes = DEgenes[DEgenes$p_val_adj < 0.1,]
-DEgenes = DEgenes$gene
-tempSeurat = SubsetData(scRNA2, subset.name = "res.1.5", accept.value = 3)
-tempSeurat = SetAllIdent(tempSeurat, id = "PlaqueScore")
-col_fun = colorRamp2(c(min(tempSeurat@scale.data[DEgenes,]), (max(tempSeurat@scale.data[DEgenes,]) + min(tempSeurat@scale.data[DEgenes,]))/2, max(tempSeurat@scale.data[DEgenes,])), c("#440154", "#21918c", "#fde725")) #viridis = c("#440154", "#21918c", "#fde725")
-Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
-png("cluster3_DE_genes.png",width=4,height=4,units="in",res=1200)
-Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
-dev.off()
-```
 
 
 
