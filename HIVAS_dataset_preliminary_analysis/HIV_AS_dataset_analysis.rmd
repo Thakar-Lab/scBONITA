@@ -21,8 +21,14 @@ require(clusterProfiler)
 require(msigdbr)
 require(scales)
 require(enrichplot)
+require(ComplexHeatmap)
+require(circlize)
+require(knitr)
+require(openxlsx)
+require(dplyr)
 
-setwd("D:\\GitHub\\fuzzyRNA\\clustering\\")
+
+setwd("D:\\GitHub\\fuzzyRNA\\clustering\\") # you should update this appropriately
 
 sessionInfo()
 
@@ -499,6 +505,19 @@ rm(list = ls())
 
 ```{r reloadData}
 require(Seurat)
+require(dplyr)
+require(reshape)
+require(wesanderson)
+require(gplots)
+require(RColorBrewer)
+require(openxlsx)
+require(ggpubr)
+require(clusterProfiler)
+require(msigdbr)
+require(scales)
+require(enrichplot)
+require(ComplexHeatmap)
+require(circlize)
 require(knitr)
 require(openxlsx)
 require(dplyr)
@@ -549,7 +568,6 @@ load("scRNA2_and_markers.RData")
 These cell identities come from an external CIBERSORT analysis.
 
 ```{r}
-
 
 cibersort_majority = c("0" = "B cells naive - 1", "1" = "T cells CD8 - 1", "2" = "T cells CD4 - 1", "3" = "T cells CD8/CD4/CD4 naive", "4" = "T cells CD8 naive/T cells CD8/ RBCs", "5" = "B cells naive - 2", "6" = "T cells naive", "7" = "T cells CD8 - 2", "8" = "T cells CD8 - 3", "9" = "NK cells resting", "10"  = "T cells CD8 - 4", "11" = "T cells CD8/NK cells resting", "12" = "T cells CD4 memory resting/ T cells CD8", "13" = "B cells memory", "14" = "Monocytes", "15" = "NK cells activated")
 scRNA2@meta.data$ClusterName =  plyr::revalue(x = as.character(scRNA2@meta.data$res.1.5), replace = cibersort_majority, warn_missing = TRUE)
@@ -645,11 +663,6 @@ Please note the gene set file is c2.cp.v6.2.symbols.gmt. Using different gene se
 
 ```{r}
 
-require(clusterProfiler)
-require(dplyr)
-require(msigdbr)
-require(scales)
-require(ggpubr)
 all_markers = FindAllMarkers(scRNA2, test.use = "MAST")
 #all_markers = as.data.frame(scRNA2.markers %>% group_by(cluster) %>% filter(p_val_adj < 0.05) %>% filter(abs(avg_logFC) > 1)) %>% top_n(50, avg_logFC) #scRNA2.markers %>% group_by(cluster) %>% top_n(30, avg_logFC)]
 all_markers = as.data.frame(scRNA2.markers %>% group_by(cluster) %>% filter(p_val_adj < 0.05) %>% filter(abs(avg_logFC) > 0.3))
@@ -693,7 +706,7 @@ write.csv(kegg_ora_cluster14, "kegg_ora_cluster14.csv")
 
 ```
 
-# GSEA and Enricher for AS+ vs AS-, for each subpopulation separately (Lauren). Also modified to do comparison for only scbonita networks
+# GSEA and Enricher for AS+ vs AS-, for each subpopulation separately. Also modified to do comparison for only scbonita networks
 
 ```{r}
 #immsigdb gmt file/gene sets
@@ -863,7 +876,7 @@ dev.off()
 ```
 
 
-# Get cluster centroids of all clusters (for Lauren)
+# Get cluster centroids of all clusters
 
 ```{r, eval=FALSE}
 
@@ -916,6 +929,7 @@ write.csv(x = dimreducdata, file = "cell_embeddings.csv")
 
 # Make publication quality heatmaps of DE genes
 ## monocytes
+
 ```{r}
 clusterMarkers = read.csv("cluster_14_ASmarkers.csv", stringsAsFactors = FALSE, row.names = 1)
 clusterMarkers = clusterMarkers[clusterMarkers$cluster == "AS+",]
@@ -924,8 +938,6 @@ DEgenes = DEgenes[DEgenes$p_val_adj < 0.1,]
 DEgenes = DEgenes$gene
 tempSeurat = SubsetData(scRNA2, subset.name = "res.1.5", accept.value = 14)
 tempSeurat = SetAllIdent(tempSeurat, id = "PlaqueScore")
-require(ComplexHeatmap)
-require(circlize)
 col_fun = colorRamp2(c(min(tempSeurat@scale.data[DEgenes,]), (max(tempSeurat@scale.data[DEgenes,]) + min(tempSeurat@scale.data[DEgenes,]))/2, max(tempSeurat@scale.data[DEgenes,])), c("#440154", "#21918c", "#fde725")) #viridis = c("#440154", "#21918c", "#fde725")
 Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
 png("cluster_14_DE_genes.png",width=4,height=4,units="in",res=1200)
@@ -944,8 +956,6 @@ DEgenes = DEgenes[DEgenes$p_val_adj < 0.1,]
 DEgenes = DEgenes$gene
 tempSeurat = SubsetData(scRNA2, subset.name = "res.1.5", accept.value = 11)
 tempSeurat = SetAllIdent(tempSeurat, id = "PlaqueScore")
-require(ComplexHeatmap)
-require(circlize)
 col_fun = colorRamp2(c(min(tempSeurat@scale.data[DEgenes,]), (max(tempSeurat@scale.data[DEgenes,]) + min(tempSeurat@scale.data[DEgenes,]))/2, max(tempSeurat@scale.data[DEgenes,])), c("#440154", "#21918c", "#fde725")) #viridis = c("#440154", "#21918c", "#fde725")
 Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
 
@@ -963,9 +973,7 @@ DEgenes = clusterMarkers[abs(clusterMarkers$avg_logFC) > 0.3,]
 DEgenes = DEgenes[DEgenes$p_val_adj < 0.1,]
 DEgenes = DEgenes$gene
 tempSeurat = SubsetData(scRNA2, subset.name = "res.1.5", accept.value =0)
-tempSeurat = SetAllIdent(tempSeurat, id = "PlaqueScore") 
-require(ComplexHeatmap)
-require(circlize)
+tempSeurat = SetAllIdent(tempSeurat, id = "PlaqueScore")
 col_fun = colorRamp2(c(min(tempSeurat@scale.data[DEgenes,]), (max(tempSeurat@scale.data[DEgenes,]) + min(tempSeurat@scale.data[DEgenes,]))/2, max(tempSeurat@scale.data[DEgenes,])), c("#440154", "#21918c", "#fde725")) #viridis = c("#440154", "#21918c", "#fde725")
 Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
 png("cluster0_DE_genes.png",width=4,height=4,units="in",res=1200)
@@ -984,8 +992,6 @@ DEgenes = DEgenes[DEgenes$p_val_adj < 0.1,]
 DEgenes = DEgenes$gene
 tempSeurat = SubsetData(scRNA2, subset.name = "res.1.5", accept.value = 5)
 tempSeurat = SetAllIdent(tempSeurat, id = "PlaqueScore")
-require(ComplexHeatmap)
-require(circlize)
 col_fun = colorRamp2(c(min(tempSeurat@scale.data[DEgenes,]), (max(tempSeurat@scale.data[DEgenes,]) + min(tempSeurat@scale.data[DEgenes,]))/2, max(tempSeurat@scale.data[DEgenes,])), c("#440154", "#21918c", "#fde725")) #viridis = c("#440154", "#21918c", "#fde725")
 Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
 png("cluster5_DE_genes.png",width=4,height=4,units="in",res=1200)
@@ -1004,8 +1010,6 @@ DEgenes = DEgenes[DEgenes$p_val_adj < 0.1,]
 DEgenes = DEgenes$gene
 tempSeurat = SubsetData(scRNA2, subset.name = "res.1.5", accept.value = 3)
 tempSeurat = SetAllIdent(tempSeurat, id = "PlaqueScore")
-require(ComplexHeatmap)
-require(circlize)
 col_fun = colorRamp2(c(min(tempSeurat@scale.data[DEgenes,]), (max(tempSeurat@scale.data[DEgenes,]) + min(tempSeurat@scale.data[DEgenes,]))/2, max(tempSeurat@scale.data[DEgenes,])), c("#440154", "#21918c", "#fde725")) #viridis = c("#440154", "#21918c", "#fde725")
 Heatmap(tempSeurat@scale.data[DEgenes,], name = "Scaled\nExpression\n", column_title = "", cluster_rows=TRUE,show_row_dend = FALSE, show_column_dend = FALSE, show_column_names = FALSE, col = col_fun, column_split = as.vector(tempSeurat@meta.data[colnames(tempSeurat@scale.data), "PlaqueScore"]),  top_annotation = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = c("lightgrey", "darkgrey")))),border=TRUE, cluster_column_slices = TRUE)
 png("cluster3_DE_genes.png",width=4,height=4,units="in",res=1200)
