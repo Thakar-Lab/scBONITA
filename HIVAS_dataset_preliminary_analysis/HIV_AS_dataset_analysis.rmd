@@ -542,14 +542,14 @@ scRNA2 = FindClusters(
     save.SNN = TRUE,
     force.recalc = TRUE
     )
+
 scRNA2=SetAllIdent(scRNA2, id ="res.1.5")
 
 scRNA2.markers = invisible(FindAllMarkers(
   object = scRNA2,
   only.pos = TRUE,
   min.pct = 0.25,
-  thresh.use = 0.25,
-  test.use = "MAST"
+  thresh.use = 0.25
 ))
 
 
@@ -664,8 +664,6 @@ Please note the gene set file is c2.cp.v6.2.symbols.gmt. Using different gene se
 
 ```{r}
 
-all_markers = scRNA2.markers #FindAllMarkers(scRNA2, test.use = "MAST")
-#all_markers = as.data.frame(scRNA2.markers %>% group_by(cluster) %>% filter(p_val_adj < 0.05) %>% filter(abs(avg_logFC) > 1)) %>% top_n(50, avg_logFC) #scRNA2.markers %>% group_by(cluster) %>% top_n(30, avg_logFC)]
 all_markers = as.data.frame(scRNA2.markers %>% group_by(cluster) %>% filter(p_val_adj < 0.05) %>% filter(abs(avg_logFC) > 0.3))
 cibersort_majority = c("0" = "B cells naive - 1", "1" = "T cells CD8 - 1", "2" = "T cells CD4 - 1", "3" = "T cells CD8/CD4/CD4 naive", "4" = "T cells CD8 naive/T cells CD8/ RBCs", "5" = "B cells naive - 2", "6" = "T cells naive", "7" = "T cells CD8 - 2", "8" = "T cells CD8 - 3", "9" = "NK cells resting", "10"  = "T cells CD8 - 4", "11" = "T cells CD8/NK cells resting", "12" = "T cells CD4 memory resting/ T cells CD8", "13" = "B cells memory", "14" = "Monocytes", "15" = "NK cells activated")
 all_markers$ClusterName =  plyr::revalue(x = as.character(all_markers$cluster), replace = cibersort_majority, warn_missing = TRUE)
@@ -710,10 +708,10 @@ write.csv(kegg_ora_cluster14, "kegg_ora_cluster14.csv")
 # GSEA and Enricher for AS+ vs AS-, for each subpopulation separately. Also modified to do comparison for only scbonita networks
 
 ```{r}
-#immsigdb gmt file/gene sets
-imm_t2g = clusterProfiler::read.gmt("c7.all.v7.1.symbols.gmt")
-bonita_t2g = clusterProfiler::read.gmt("graphs_to_gmt_scBonita.gmt")
-bonita_t2g = bonita_t2g[bonita_t2g$gene != "",]
+
+imm_t2g = clusterProfiler::read.gmt("c7.all.v7.1.symbols.gmt") #immsigdb gmt file/gene sets
+bonita_t2g = clusterProfiler::read.gmt("graphs_to_gmt_scBonita.gmt") #gmt for scBonita/KEGG networks
+bonita_t2g = bonita_t2g[bonita_t2g$gene != "",] 
 temp_kegg = matrix(data=NA, nrow=1, ncol = 10) #only kegg
 temp_gsea = matrix(data=NA, nrow=1, ncol = 12) #all genesets gsea-allgenesets
 colnames(temp_gsea) = c("ID", "Description", "setSize", "enrichmentScore", "NES", "pvalue", "p.adjust", "qvalues" , "rank", "leading_edge", "core_enrichment", "Cluster")
