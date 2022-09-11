@@ -523,6 +523,8 @@ require(circlize)
 require(knitr)
 require(openxlsx)
 require(dplyr)
+require(plyr)
+
 load(file = "pca_sample_corrected.RData")
 scRNA2=scRNA
 scRNA = NULL
