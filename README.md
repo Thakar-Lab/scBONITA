@@ -22,6 +22,10 @@ To use single-cellRNA seq data to develop executable models of signaling pathway
 
 We show in our manuscript that scBONITA learns dynamic models of signaling pathways to identify pathways significantly dysregulated in HIV-associated atherosclerosis. These pathways indicate that cell migration into the vascular endothelium is significantly affected by dysregulated lipid signaling in AS+ PLWH. Dynamic modeling facilitates pathway-based characterization of cellular states that are not apparent in gene expression analyses.
 
+This repository includes code for preliminary analysis of our HIV/AS scRNA-seq dataset GSE198339
+- Link to dataset: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE198339
+- Link to analysis code: https://github.com/Thakar-Lab/scBONITA/tree/main/HIVAS_dataset_preliminary_analysis
+
 ## Graphical abstract
 
 ![Graphical abstract - Figure 2 from manuscript](https://github.com/Thakar-Lab/scBONITA/blob/main/graphical_abstract_scBonita.png?raw=true)
