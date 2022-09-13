@@ -64,7 +64,16 @@ Modify the C file to reflect the size of the training data set
 Next, the C code must be compiled using the make file. Navigate to the folder in which the scBONITA package is located and in a Bash terminal, type
     `make`
 
-Install the scBonita conda environment from the provided yml file, and activate the conda environment.
+Install the scBonita conda environment from the provided yml file OR the provided spec-file (PREFERRED), and activate the conda environment.
+Type the following commands into a terminal. Note - you should be in the directory containing the spec-file/yml file.
+
+`module load anaconda3/2020.07`
+
+`conda create --name scBonita --file spec-file.txt`
+
+'source activate scBonita`
+
+If there are errors at later stages suggesting that packages are not installed/dependencies are not installed or need to be updated, you will need to install packages into this conda environment. I suggest googling 'install package xyz in conda' and following the instructions.
 
 ## Step 1: Set up the scBONITA pipeline.
 
