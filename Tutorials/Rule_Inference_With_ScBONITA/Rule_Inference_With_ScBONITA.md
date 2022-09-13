@@ -11,6 +11,8 @@ Type the following commands into a terminal. Note - you should be in the directo
 
 `conda create --name scBonita --file spec-file.txt`
 
+'source activate scBonita`
+
 If there are errors at later stages suggesting that packages are not installed/dependencies are not installed or need to be updated, you will need to install packages into this conda environment. I suggest googling 'install package xyz in conda' and following the instructions.
 
 ## <span style="color:blue">Step 1: Set up the scBONITA pipeline.</span>
