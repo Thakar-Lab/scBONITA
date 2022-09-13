@@ -7,10 +7,11 @@
 Install the scBonita conda environment from the provided yml file OR the provided spec-file (PREFERRED), and activate the conda environment.
 Type the following commands into a terminal. Note - you should be in the directory containing the spec-file/yml file.
 
-`
-module load anaconda3/2020.07
-conda create --name scBonita2 --file spec-file.txt
-`
+`module load anaconda3/2020.07`
+
+`conda create --name scBonita --file spec-file.txt`
+
+If there are errors at later stages suggesting that packages are not installed/dependencies are not installed or need to be updated, you will need to install packages into this conda environment. I suggest googling 'install package xyz in conda' and following the instructions.
 
 ## <span style="color:blue">Step 1: Set up the scBONITA pipeline.</span>
 
