@@ -30,9 +30,8 @@ To run setup, you will need to modify `scBonita_setup.sh`.
 1. pathwayList Paths to GRAPHML files that should be used for scBONITA analysis. Usually networks from non-KEGG sources, saved in GRAPHML format
 1. maxNodes Number of genes in the dataset
 1. separator Delimiting character in dataFile. Must be one of , (comma), \s (space) or \t (tab)
-1. getKEGGPathways Should scBonita automatically identify and download KEGG pathways with genes that are in your dataset? You can specify which pathways using the 
-1. listOfKEGGPathways option, or leave it blank to download all matching KEGG pathways
-1. listOfKEGGPathways Which KEGG pathways should scBonita download? Specify the five letter pathway IDs.
+1. getKEGGPathways Should scBonita automatically identify and download KEGG pathways with genes that are in your dataset? You can specify which pathways using the listOfKEGGPathways option, or leave it blank to download all matching KEGG pathways.
+1. listOfKEGGPathways Which KEGG pathways should scBonita download? Specify the five letter pathway IDs, or leave it blank to download all matching KEGG pathways.
 1. organism Three-letter organism code. Which organism is the dataset derived from? Default="hsa"
 1. cvThreshold: Minimum coefficient of variation to retain genes for scBONITA analysis. Default=None
 1. generateSbatch: Should scBONITA generate and execute SLURM sbatch scripts to run multiple rule inference jobs? Default=False
