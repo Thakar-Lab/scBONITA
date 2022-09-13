@@ -19,6 +19,13 @@ If there are errors at later stages suggesting that packages are not installed/d
 
 scBONITA needs a training dataset in matrix-style forma; this is usually a tab or comma-delimited file with columns as cells and rows as features. The first column should be feature names and the first row should be cell IDs. The units of the expression data will typically be a variant of log2(TPM +1).
 
+| Genes | Cell1  | Cell2 | Cell3 | Cell4 |
+| ------------- | ------------- | ------------- | ------------- | ------------- |
+| Gene1 | 1.1  | 2.1  | .  | .  |
+| Gene2  | 1.2  | 2.3  | .  | .  |
+| Gene3  | 1.3  | .  | .  | .  |
+| Gene4  | 1.4  | .  | .  | .  |
+
 Usually, you will need to use an SBATCH script to submit jobs to the SLURM queue. So all the parameters and commands below should be modified in the SBATCH script.
 Example SBATCH scripts are in https://github.com/mgp13/scBONITA/tree/main/Tutorials/Example%20SBATCH%20scripts
 To run setup, you will need to modify `scBonita_setup.sh`.
@@ -30,9 +37,8 @@ To run setup, you will need to modify `scBonita_setup.sh`.
 1. pathwayList Paths to GRAPHML files that should be used for scBONITA analysis. Usually networks from non-KEGG sources, saved in GRAPHML format
 1. maxNodes Number of genes in the dataset
 1. separator Delimiting character in dataFile. Must be one of , (comma), \s (space) or \t (tab)
-1. getKEGGPathways Should scBonita automatically identify and download KEGG pathways with genes that are in your dataset? You can specify which pathways using the 
-1. listOfKEGGPathways option, or leave it blank to download all matching KEGG pathways
-1. listOfKEGGPathways Which KEGG pathways should scBonita download? Specify the five letter pathway IDs.
+1. getKEGGPathways Should scBonita automatically identify and download KEGG pathways with genes that are in your dataset? You can specify which pathways using the listOfKEGGPathways option, or leave it blank to download all matching KEGG pathways.
+1. listOfKEGGPathways Which KEGG pathways should scBonita download? Specify the five letter pathway IDs, or leave it blank to download all matching KEGG pathways.
 1. organism Three-letter organism code. Which organism is the dataset derived from? Default="hsa"
 1. cvThreshold: Minimum coefficient of variation to retain genes for scBONITA analysis. Default=None
 1. generateSbatch: Should scBONITA generate and execute SLURM sbatch scripts to run multiple rule inference jobs? Default=False
