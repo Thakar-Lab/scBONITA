@@ -2,10 +2,23 @@
 
 ## _Please refer to the README file for installation and setup instructions_
 
+### These instructions are specific to SLURM environments on BlueHive at URMC (this is written for internal Thakar Lab use) but are easily translatable to other environments.
+
+Install the scBonita conda environment from the provided yml file OR the provided spec-file (PREFERRED), and activate the conda environment.
+Type the following commands into a terminal. Note - you should be in the directory containing the spec-file/yml file.
+
+`
+module load anaconda3/2020.07
+conda create --name scBonita2 --file spec-file.txt
+`
+
 ## <span style="color:blue">Step 1: Set up the scBONITA pipeline.</span>
+
 scBONITA needs a training dataset in matrix-style forma; this is usually a tab or comma-delimited file with columns as cells and rows as features. The first column should be feature names and the first row should be cell IDs. The units of the expression data will typically be a variant of log2(TPM +1).
 
-
+Usually, you will need to use an SBATCH script to submit jobs to the SLURM queue. So all the parameters and commands below should be modified in the SBATCH script.
+Example SBATCH scripts are in https://github.com/mgp13/scBONITA/tree/main/Tutorials/Example%20SBATCH%20scripts
+To run setup, you will need to modify `scBonita_setup.sh`.
 
 ### The setup pipeline has the following parameters:
 
@@ -33,7 +46,7 @@ scBONITA needs a training dataset in matrix-style forma; this is usually a tab o
 
 ### The following command runs scBONITA setup for a 20000*10000 comma-separated data set "example.csv". It downloads the KEGG pathways hsa00010 and hsa00020 for rule inference.
 
-`python3.6 pipeline.py --dataFile "example.csv" --fullPipeline 1 --maxNodes 20000 --maxSamples 10000 --separator "," --listOfKEGGPathways "00010" "00020" --getKEGGPathways 1 --organism hsa cvThreshold None`
+`python3.6 pipeline.py --dataFile "example.csv" --fullPipeline 1 --maxNodes 20000 --maxSamples 10000 --separator "," --listOfKEGGPathways "00010" "00020" --getKEGGPathways 1 --organism hsa --cvThreshold None`
 
 ### The following command runs scBONITA setup for a 20000*10000 comma-separated data set "example.csv". It uses two networks (not provided with this package) "exampleNet1.graphml" and "exampleNet2.graphml" in graphml format for rule inference.
 
