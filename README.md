@@ -82,6 +82,14 @@ If there are errors at later stages suggesting that packages are not installed/d
 Copy the following files into the src/scBonita folder that you downloaded from github:    
 
 - scBONITA needs a training dataset in matrix-style format; this is usually a tab or comma-delimited file with columns as cells and rows as features. The first column should be feature names and the first row should be cell IDs. The units of the expression data will typically be a variant of log2(TPM +1). The first column should be labeled 'Genes' or similar. The first row should be cell IDs. The cell IDs should be the same as the cell IDs in the metadata file (see below).
+
+| Genes | Cell1  | Cell2 | Cell3 | Cell4 |
+| ------------- | ------------- | ------------- | ------------- | ------------- |
+| Gene1 | 1.1  | 2.1  | .  | .  |
+| Gene2  | 1.2  | 2.3  | .  | .  |
+| Gene3  | 1.3  | .  | .  | .  |
+| Gene4  | 1.4  | .  | .  | .  |
+
 - metadata (or conditions) in a matrix format, where rows are cells and columns are cell properties/treatment/condition/etc. Entries must be 1s or 0s.
 
 Example for  dataset containing a mixture of different types of monocytes and B cells:
