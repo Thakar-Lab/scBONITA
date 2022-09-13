@@ -79,8 +79,28 @@ If there are errors at later stages suggesting that packages are not installed/d
 
 **Please refer to the tutorial "Rule_Inference_With_scBONITA.ipynb" for a demonstration of rule inference with scBONITA using a test dataset packaged with scBONITA and a list of parameters for the setup. More information can also be found by typing `python3 pipeline.py --help` into the terminal.** 
 
+Copy the following files into the src/scBonita folder that you downloaded from github:    
 
-scBONITA needs a training dataset in matrix-style forma; this is usually a tab or comma-delimited file with columns as cells and rows as features. The first column should be feature names and the first row should be cell IDs. The units of the expression data will typically be a variant of log2(TPM +1).
+- scBONITA needs a training dataset in matrix-style format; this is usually a tab or comma-delimited file with columns as cells and rows as features. The first column should be feature names and the first row should be cell IDs. The units of the expression data will typically be a variant of log2(TPM +1). The first column should be labeled 'Genes' or similar. The first row should be cell IDs. The cell IDs should be the same as the cell IDs in the metadata file (see below).
+- metadata (or conditions) in a matrix format, where rows are cells and columns are cell properties/treatment/condition/etc. Entries must be 1s or 0s.
+
+Example for  dataset containing a mixture of different types of monocytes and B cells:
+
+| CellID  | CD14_monocyte | CD16_monocyte | Memory_Bcell | Naive_Bcell|
+| ------------- | ------------- | ------------- | ------------- | ------------- |
+| Cell1 | 1  | 0  | 0  | 0  |
+| Cell2  | 0  | 0  | 1  | 0  |
+| Cell3  | 0  | 1  | 0  | 0  |
+| Cell4  | 0  | 0  | 0  | 1  |
+
+- a contrast file. This is similar to a design matrix. Each row contains the pair of conditions that need to be compared, separated by a tab. The conditions should be columns from the metadata file. For example,
+
+Example if you wanted to compare cell types as defined in the metadata example above:
+
+|  |  |
+| ------------- | ------------- |
+| CD14_monocyte | CD16_monocyte | 
+| Memory_Bcell | Naive_Bcell | 
 
 The following command runs scBONITA setup for a 20000*10000 comma-separated data set "example.csv". It downloads the KEGG pathways hsa00010 and hsa00020 for rule inference.
 
