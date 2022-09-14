@@ -59,7 +59,7 @@ To run setup, you will need to modify `scBonita_setup.sh`.
 
 ### The following command runs scBONITA setup for a 20000*10000 comma-separated data set "example.csv". It uses two networks (not provided with this package) "exampleNet1.graphml" and "exampleNet2.graphml" in graphml format for rule inference.
 
-`python3.6 pipeline.py --dataFile "example.csv" --fullPipeline 1 --maxNodes 20000 --maxSamples 10000 --separator "," --pathwayList "exampleNet1.graphml" "exampleNet2.graphml"`
+`python3.6 pipeline.py --dataFile "example.csv" --fullPipeline 1 --maxNodes 20000 --separator "," --pathwayList "exampleNet1.graphml" "exampleNet2.graphml"`
 
 ## <span style="color:blue">Step 2A: Rule inference and calculation of node importance score for the networks specified in Step 1 (setup).</span>
 
