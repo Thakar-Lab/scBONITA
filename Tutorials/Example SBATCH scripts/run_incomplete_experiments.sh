@@ -28,9 +28,9 @@ for d in */ ; do
         input="$base""_scoreNodes.sh"
         localSearch="$base""_localErrors1.pickle"
         globalSearch="$base""_out2.pickle"
-        #[ -f "$input" -a ! -f "$out" ] && echo "$input is missing $out" >&2 #missing importance score calculations
+        [ -f "$input" -a ! -f "$out" ] && echo "$input is missing $out" >&2 #missing importance score calculations
         #[ -f "$input" -a ! -f "$localSearch" ] && echo "$input is missing $localSearch" >&2 #missing local search output
-        [ -f "$input" -a ! -f "$globalSearch" ] && echo "$input is missing $globalSearch" >&2 #missing global search output
+        #[ -f "$input" -a ! -f "$globalSearch" ] && echo "$input is missing $globalSearch" >&2 #missing global search output
         [ -f "$input" -a ! -f "$globalSearch" ] && sbatch $input #(re)execute jobs where global search has not completed
     done
 cd ..
