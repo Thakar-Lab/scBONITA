@@ -17,8 +17,8 @@ make
 source activate scBonita
 
 #Initiate run
-# MODIFY condaEnv
-python3 pipeline.py --dataFile "Kazer2020expr.csv" --fullPipeline 1 --maxNodes 20000 --separator "," --getKEGGPathways True --organism "hsa" --generateSbatch True --condaEnv "scBonita2" --pythonVersion "python3" --sampleCells True --parallelSearch True --memory "60G" --partition "standard" --binarizeThreshold 0.1
+# MODIFY condaEnv, module (maybe), 
+python3 pipeline.py --dataFile "Kazer2020expr.csv" --fullPipeline 1 --maxNodes 20000 --separator "," --getKEGGPathways True --organism "hsa" --generateSbatch True --condaEnv "scBonita2" --pythonVersion "python3" --sampleCells True --parallelSearch True --memory "60G" --partition "standard" --binarizeThreshold 0.1 --time "24:00:00"  
 
 #Check the progress of jobs using:
 #squeue -u yourNETID
