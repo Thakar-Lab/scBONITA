@@ -151,6 +151,7 @@ class ruleMaker:
                     self.binMat[predIndex, :].todense().tolist()[0]
                 )  # find binarized expression data for predecessor "k"
                 mi, pvalue = spearmanr(nodeData, predData)
+                mi = abs(mi)
                 if np.isnan(mi):
                     predCorr_temp.append(0)
                 else:
