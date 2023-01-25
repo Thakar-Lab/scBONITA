@@ -11,13 +11,13 @@ Type the following commands into a terminal. Note - you should be in the directo
 
 `conda create --name scBonita --file spec-file.txt`
 
-'source activate scBonita`
+`source activate scBonita`
 
 If there are errors at later stages suggesting that packages are not installed/dependencies are not installed or need to be updated, you will need to install packages into this conda environment. I suggest googling 'install package xyz in conda' and following the instructions.
 
 ## <span style="color:blue">Step 1: Set up the scBONITA pipeline.</span>
 
-scBONITA needs a training dataset in matrix-style forma; this is usually a tab or comma-delimited file with columns as cells and rows as features. The first column should be feature names and the first row should be cell IDs. The units of the expression data will typically be a variant of log2(TPM +1).
+scBONITA needs a training dataset in matrix-style format; this is usually a tab or comma-delimited file with columns as cells and rows as features. The first column should be feature names and the first row should be cell IDs. The units of the expression data will typically be a variant of log2(TPM +1).
 
 | Genes | Cell1  | Cell2 | Cell3 | Cell4 |
 | ------------- | ------------- | ------------- | ------------- | ------------- |
