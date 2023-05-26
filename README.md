@@ -51,9 +51,9 @@ We recommend that the scBONITA pipeline is used on a high-performance system wit
 1. Use git to clone this repository
     `git clone https://github.com/YOUR-USERNAME/YOUR-REPOSITORY`
 
-Modify the C file to reflect the size of the training data set
+**Modify the C file to reflect the size of the training data set
     - line 7: NODE is the number of nodes in the dataset (or larger)
-    - line 8: CELL is the number of cells to be sampled from the dataset (or larger)
+    - line 8: CELL is the number of cells to be sampled from the dataset (or larger)**
 
 Next, the C code must be compiled using the make file. Navigate to the folder in which the scBONITA package is located and in a Bash terminal, type
     `make`
