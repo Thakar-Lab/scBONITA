@@ -795,7 +795,7 @@ class singleCell(ruleMaker):
                             )
                         nodeScoresDF.to_csv(
                             pathname
-                            + ".graphml_processed.graphml_importanceScores.csv",
+                            + "_vs_".join(contrasts) + ".graphml_processed.graphml_importanceScores.csv",
                             index=False,
                         )
                         if (
